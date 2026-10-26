@@ -2,6 +2,9 @@
 
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Warm off-white page background and the hairline used for every border. */
+  --color-canvas: #eeefe9;
+  --color-line: #d6d6cc;
 }
 
 html, body, #root {
@@ -9,5 +12,5 @@ html, body, #root {
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-canvas text-stone-900 antialiased;
 }

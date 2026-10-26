@@ -17,7 +17,23 @@ public record ApplicationDto(
     IReadOnlyList<string> GrantTypes,
     IReadOnlyList<string> Scopes,
     bool RequirePkce,
-    bool IsSystem);
+    bool IsSystem,
+    /// <summary>Users who currently have access (a valid authorization) to this application.</summary>
+    int UserCount);
+
+/// <summary>A user as seen from one application: when they first signed in to it and whether they still have access.</summary>
+public record ApplicationUserDto(
+    string Id,
+    string Email,
+    string? FirstName,
+    string? LastName,
+    IReadOnlyList<string> Roles,
+    bool IsLockedOut,
+    bool HasAccess,
+    DateTimeOffset? FirstAccessAt,
+    DateTimeOffset? LastUsedAt);
+
+public record ApplicationUserGrantRequest([Required] string UserId);
 
 public record ApplicationSaveRequest(
     [Required, MaxLength(100), RegularExpression("^[A-Za-z0-9._:-]+$")] string ClientId,

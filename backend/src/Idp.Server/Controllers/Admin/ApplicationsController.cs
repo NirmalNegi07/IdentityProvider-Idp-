@@ -1,11 +1,16 @@
 using System.Security.Cryptography;
+using Idp.Server.Data;
 using Idp.Server.Infrastructure;
 using Idp.Server.Models;
 using Idp.Server.Options;
+using Idp.Server.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using OpenIddict.Abstractions;
+using OpenIddict.EntityFrameworkCore.Models;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace Idp.Server.Controllers.Admin;
@@ -14,7 +19,14 @@ namespace Idp.Server.Controllers.Admin;
 [ApiController]
 [Route("api/admin/applications")]
 [Authorize(Policy = AdminApi.Policy)]
-public class ApplicationsController(IOpenIddictApplicationManager manager, IMemoryCache cache) : ControllerBase
+public class ApplicationsController(
+    IOpenIddictApplicationManager manager,
+    IOpenIddictAuthorizationManager authorizationManager,
+    IOpenIddictTokenManager tokenManager,
+    ApplicationDbContext db,
+    UserManager<ApplicationUser> userManager,
+    UserClaimsFactory claimsFactory,
+    IMemoryCache cache) : ControllerBase
 {
     private static readonly string[] SupportedGrantTypes =
         [GrantTypes.AuthorizationCode, GrantTypes.RefreshToken, GrantTypes.ClientCredentials];
@@ -28,17 +40,27 @@ public class ApplicationsController(IOpenIddictApplicationManager manager, IMemo
     [HttpGet]
     public async Task<IReadOnlyList<ApplicationDto>> List()
     {
+        // One query for every application's user count rather than one per application.
+        var counts = await Authorizations
+            .Where(a => a.Status == Statuses.Valid && a.Subject != null)
+            .Select(a => new { ApplicationId = a.Application!.Id, a.Subject })
+            .Distinct()
+            .GroupBy(a => a.ApplicationId)
+            .Select(g => new { ApplicationId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.ApplicationId!, x => x.Count);
+
         var result = new List<ApplicationDto>();
         await foreach (var application in manager.ListAsync())
         {
-            result.Add(await ToDtoAsync(application));
+            var id = (await manager.GetIdAsync(application))!;
+            result.Add(await ToDtoAsync(application, counts.GetValueOrDefault(id)));
         }
         return result.OrderBy(a => a.DisplayName ?? a.ClientId).ToList();
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(string id) =>
-        await manager.FindByIdAsync(id) is { } application ? Ok(await ToDtoAsync(application)) : NotFound();
+        await manager.FindByIdAsync(id) is { } application ? Ok(await ToDtoWithCountAsync(application)) : NotFound();
 
     [HttpPost]
     public async Task<IActionResult> Create(ApplicationSaveRequest request)
@@ -63,7 +85,7 @@ public class ApplicationsController(IOpenIddictApplicationManager manager, IMemo
 
         var application = await manager.CreateAsync(descriptor);
         ClientCorsPolicyProvider.Invalidate(cache);
-        return Ok(new ApplicationSecretResponse(await ToDtoAsync(application), secret));
+        return Ok(new ApplicationSecretResponse(await ToDtoWithCountAsync(application), secret));
     }
 
     [HttpPut("{id}")]
@@ -106,7 +128,7 @@ public class ApplicationsController(IOpenIddictApplicationManager manager, IMemo
 
         await manager.UpdateAsync(application, descriptor);
         ClientCorsPolicyProvider.Invalidate(cache);
-        return Ok(new ApplicationSecretResponse(await ToDtoAsync(application), secret));
+        return Ok(new ApplicationSecretResponse(await ToDtoWithCountAsync(application), secret));
     }
 
     [HttpPost("{id}/rotate-secret")]
@@ -126,7 +148,7 @@ public class ApplicationsController(IOpenIddictApplicationManager manager, IMemo
         descriptor.ClientSecret = secret;
         await manager.UpdateAsync(application, descriptor);
 
-        return Ok(new ApplicationSecretResponse(await ToDtoAsync(application), secret));
+        return Ok(new ApplicationSecretResponse(await ToDtoWithCountAsync(application), secret));
     }
 
     [HttpDelete("{id}")]
@@ -144,6 +166,129 @@ public class ApplicationsController(IOpenIddictApplicationManager manager, IMemo
         ClientCorsPolicyProvider.Invalidate(cache);
         return NoContent();
     }
+
+    /// <summary>
+    /// Users of one application. Every sign-in through the IDP stores a permanent OpenIddict
+    /// authorization for (user, application), so those rows are the application's user list.
+    /// </summary>
+    [HttpGet("{id}/users")]
+    public async Task<IActionResult> Users(string id, [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        if (await manager.FindByIdAsync(id) is null) return NotFound();
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var grants = Authorizations
+            .Where(a => a.Application!.Id == id && a.Subject != null)
+            .GroupBy(a => a.Subject!)
+            .Select(g => new
+            {
+                UserId = g.Key,
+                FirstAccess = g.Min(a => a.CreationDate),
+                ValidCount = g.Count(a => a.Status == Statuses.Valid),
+            });
+
+        var query = from g in grants
+                    join u in db.Users on g.UserId equals u.Id
+                    select new { User = u, g.FirstAccess, g.ValidCount };
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            query = query.Where(x => x.User.Email!.Contains(term) || x.User.FirstName!.Contains(term) || x.User.LastName!.Contains(term));
+        }
+
+        var total = await query.CountAsync();
+        var rows = await query.OrderBy(x => x.User.Email).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+        var ids = rows.Select(r => r.User.Id).ToList();
+        var roles = await (from ur in db.UserRoles
+                           join r in db.Roles on ur.RoleId equals r.Id
+                           where ids.Contains(ur.UserId)
+                           select new { ur.UserId, r.Name }).ToListAsync();
+        var rolesByUser = roles.ToLookup(r => r.UserId, r => r.Name!);
+
+        // Codes, refresh and access tokens are stored per application, so the newest one is the last sign-in or refresh.
+        var lastUsed = await db.Set<OpenIddictEntityFrameworkCoreToken>()
+            .Where(t => t.Application!.Id == id && t.Subject != null && ids.Contains(t.Subject))
+            .GroupBy(t => t.Subject!)
+            .Select(g => new { UserId = g.Key, Last = g.Max(t => t.CreationDate) })
+            .ToDictionaryAsync(x => x.UserId, x => x.Last);
+
+        var now = DateTimeOffset.UtcNow;
+        var items = rows.Select(r => new ApplicationUserDto(
+            r.User.Id,
+            r.User.Email!,
+            r.User.FirstName,
+            r.User.LastName,
+            rolesByUser[r.User.Id].Order().ToList(),
+            r.User.LockoutEnd is { } end && end > now,
+            r.ValidCount > 0,
+            AsUtc(r.FirstAccess),
+            AsUtc(lastUsed.GetValueOrDefault(r.User.Id)))).ToList();
+
+        return Ok(new PagedResult<ApplicationUserDto>(items, total, page, pageSize));
+    }
+
+    /// <summary>
+    /// Gives a user access to the application ahead of their first sign-in. Required for applications
+    /// with the "external" consent type, which only admit users an administrator has approved.
+    /// </summary>
+    [HttpPost("{id}/users")]
+    public async Task<IActionResult> GrantUser(string id, ApplicationUserGrantRequest request)
+    {
+        var application = await manager.FindByIdAsync(id);
+        if (application is null) return NotFound();
+
+        var user = await userManager.FindByIdAsync(request.UserId);
+        if (user is null) return BadRequest(new { error = "The user does not exist." });
+
+        var app = await ToDtoAsync(application, 0);
+        if (!app.GrantTypes.Contains(GrantTypes.AuthorizationCode))
+        {
+            return BadRequest(new { error = "This application does not sign users in, so it has no users." });
+        }
+
+        var existing = await authorizationManager.FindAsync(
+            subject: user.Id, client: id, status: Statuses.Valid, type: AuthorizationTypes.Permanent, scopes: null).AnyAsync();
+        if (!existing)
+        {
+            // Cover every scope the application may request, or the authorize endpoint won't match this grant.
+            var scopes = app.Scopes.ToList();
+            if (app.GrantTypes.Contains(GrantTypes.RefreshToken)) scopes.Add(Scopes.OfflineAccess);
+
+            var identity = await claimsFactory.PopulateAsync(UserClaimsFactory.CreateEmptyIdentity(), user);
+            await authorizationManager.CreateAsync(identity, user.Id, id, AuthorizationTypes.Permanent, [.. scopes.Distinct()]);
+        }
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Removes a user's access to one application: revokes their stored consent and every token issued to
+    /// that application, which signs them out of it. Other applications and the IDP session are untouched.
+    /// </summary>
+    [HttpDelete("{id}/users/{userId}")]
+    public async Task<IActionResult> RevokeUser(string id, string userId)
+    {
+        if (await manager.FindByIdAsync(id) is null) return NotFound();
+
+        await foreach (var token in tokenManager.FindAsync(subject: userId, client: id, status: null, type: null))
+        {
+            await tokenManager.TryRevokeAsync(token);
+        }
+        await foreach (var authorization in authorizationManager.FindAsync(subject: userId, client: id, status: null, type: null, scopes: null))
+        {
+            await authorizationManager.TryRevokeAsync(authorization);
+        }
+
+        return NoContent();
+    }
+
+    private IQueryable<OpenIddictEntityFrameworkCoreAuthorization> Authorizations => db.Set<OpenIddictEntityFrameworkCoreAuthorization>();
+
+    private static DateTimeOffset? AsUtc(DateTime? value) =>
+        value is { } v ? new DateTimeOffset(DateTime.SpecifyKind(v, DateTimeKind.Utc)) : null;
 
     /// <summary>Translates the friendly request into OpenIddict permissions/requirements. Returns an error message if invalid.</summary>
     private static string? Apply(OpenIddictApplicationDescriptor descriptor, ApplicationSaveRequest request)
@@ -221,7 +366,18 @@ public class ApplicationsController(IOpenIddictApplicationManager manager, IMemo
         return null;
     }
 
-    private async Task<ApplicationDto> ToDtoAsync(object application)
+    private async Task<ApplicationDto> ToDtoWithCountAsync(object application)
+    {
+        var id = (await manager.GetIdAsync(application))!;
+        var count = await Authorizations
+            .Where(a => a.Application!.Id == id && a.Status == Statuses.Valid && a.Subject != null)
+            .Select(a => a.Subject)
+            .Distinct()
+            .CountAsync();
+        return await ToDtoAsync(application, count);
+    }
+
+    private async Task<ApplicationDto> ToDtoAsync(object application, int userCount)
     {
         var d = new OpenIddictApplicationDescriptor();
         await manager.PopulateAsync(d, application);
@@ -243,7 +399,8 @@ public class ApplicationsController(IOpenIddictApplicationManager manager, IMemo
             GrantTypes: WithPrefix(Permissions.Prefixes.GrantType),
             Scopes: scopes,
             RequirePkce: d.Requirements.Contains(Requirements.Features.ProofKeyForCodeExchange),
-            IsSystem: d.ClientId == AdminApi.ClientId);
+            IsSystem: d.ClientId == AdminApi.ClientId,
+            UserCount: userCount);
     }
 
     private static string GenerateSecret() => Base64UrlEncode(RandomNumberGenerator.GetBytes(32));

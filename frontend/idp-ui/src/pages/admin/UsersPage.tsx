@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from 'react-oidc-context'
 import { Alert, Badge, Button, Card, Checkbox, ConfirmDialog, EmptyState, Field, Input, LoadingBlock, Modal, PageHeader } from '../../components/ui'
+import { table } from '../../components/table'
 import { adminApi, type Paged, type Role, type User, type UserInput } from '../../lib/adminApi'
 import { errorMessage } from '../../lib/http'
 
@@ -69,7 +70,7 @@ export function UsersPage() {
       {error && <div className="mb-4"><Alert>{error}</Alert></div>}
 
       <Card>
-        <div className="border-b border-slate-200 p-4">
+        <div className="border-b border-line p-4">
           <Input type="search" placeholder="Search by email or name…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
         </div>
         {!data ? (
@@ -79,7 +80,7 @@ export function UsersPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b border-slate-200 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+              <thead className={table.head}>
                 <tr>
                   <th className="px-5 py-3">User</th>
                   <th className="px-5 py-3">Roles</th>
@@ -88,19 +89,19 @@ export function UsersPage() {
                   <th className="px-5 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className={table.body}>
                 {data.items.map((u) => (
-                  <tr key={u.id}>
+                  <tr key={u.id} className={table.row}>
                     <td className="px-5 py-3">
                       <div className="font-medium">{[u.firstName, u.lastName].filter(Boolean).join(' ') || '—'}</div>
-                      <div className="text-xs text-slate-500">{u.email}</div>
+                      <div className="text-xs text-stone-500">{u.email}</div>
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex flex-wrap gap-1">
-                        {u.roles.map((r) => <Badge key={r} tone={r === 'Admin' ? 'indigo' : 'slate'}>{r}</Badge>)}
+                        {u.roles.map((r) => <Badge key={r} tone={r === 'Admin' ? 'brand' : 'neutral'}>{r}</Badge>)}
                       </div>
                     </td>
-                    <td className="hidden whitespace-nowrap px-5 py-3 text-slate-500 lg:table-cell">{formatDate(u.lastLoginAt)}</td>
+                    <td className="hidden whitespace-nowrap px-5 py-3 text-stone-500 lg:table-cell">{formatDate(u.lastLoginAt)}</td>
                     <td className="px-5 py-3">
                       {u.isLockedOut ? <Badge tone="red">Locked</Badge> : <Badge tone="green">Active</Badge>}
                     </td>
@@ -126,7 +127,7 @@ export function UsersPage() {
           </div>
         )}
         {data && data.total > PAGE_SIZE && (
-          <div className="flex items-center justify-between border-t border-slate-200 px-5 py-3 text-sm text-slate-500">
+          <div className="flex items-center justify-between border-t border-line px-5 py-3 text-sm text-stone-500">
             <span>
               {data.total} users · page {page} of {totalPages}
             </span>
@@ -225,7 +226,7 @@ function UserForm({ user, roles, onClose, onSaved }: { user: User | null; roles:
         )}
         <Checkbox label="Email confirmed" checked={input.emailConfirmed} onChange={(e) => setInput({ ...input, emailConfirmed: e.target.checked })} />
         <fieldset>
-          <legend className="mb-2 text-sm font-medium text-slate-700">Roles</legend>
+          <legend className="mb-2 text-sm font-medium text-stone-700">Roles</legend>
           <div className="grid grid-cols-2 gap-2">
             {roles.map((r) => (
               <Checkbox key={r.id} label={r.name} checked={input.roles.includes(r.name)} onChange={() => toggleRole(r.name)} />

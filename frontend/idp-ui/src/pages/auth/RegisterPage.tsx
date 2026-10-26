@@ -48,8 +48,8 @@ export function RegisterPage() {
 
   if (!allowed) {
     return (
-      <AuthLayout title="Registration closed" footer={<Link to={loginLink} className="font-medium text-indigo-600">Back to sign in</Link>}>
-        <p className="text-sm text-slate-600">Self-registration is disabled. Ask an administrator to create an account for you.</p>
+      <AuthLayout title="Registration closed" footer={<Link to={loginLink} className="font-medium text-orange-700">Back to sign in</Link>}>
+        <p className="text-sm text-stone-600">Self-registration is disabled. Ask an administrator to create an account for you.</p>
       </AuthLayout>
     )
   }
@@ -61,7 +61,7 @@ export function RegisterPage() {
       footer={
         <>
           Already have an account?{' '}
-          <Link to={loginLink} className="font-medium text-indigo-600 hover:text-indigo-500">Sign in</Link>
+          <Link to={loginLink} className="font-medium text-orange-700 hover:text-orange-600">Sign in</Link>
         </>
       }
     >

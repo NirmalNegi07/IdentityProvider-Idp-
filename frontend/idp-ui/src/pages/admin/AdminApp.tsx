@@ -1,9 +1,14 @@
-import { useEffect, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AuthProvider, useAuth } from 'react-oidc-context'
-import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { AppsIcon, HomeIcon, MenuIcon, PlusIcon, RolesIcon, ScopesIcon, SignOutIcon, UsersIcon } from '../../components/icons'
 import { Alert, Button, LoadingBlock } from '../../components/ui'
+import { adminApi, type Application } from '../../lib/adminApi'
+import { ApplicationsContext, useApplications } from '../../lib/applications'
+import { errorMessage } from '../../lib/http'
 import { adminUserManager, hasRole } from '../../lib/oidc'
-import { ApplicationsPage } from './ApplicationsPage'
+import { ApplicationDetailPage } from './ApplicationDetailPage'
+import { AppIcon, ApplicationsPage } from './ApplicationsPage'
 import { DashboardPage } from './DashboardPage'
 import { RolesPage } from './RolesPage'
 import { ScopesPage } from './ScopesPage'
@@ -20,16 +25,19 @@ export function AdminApp() {
       }}
     >
       <RequireAdmin>
-        <AdminLayout>
-          <Routes>
-            <Route index element={<DashboardPage />} />
-            <Route path="applications" element={<ApplicationsPage />} />
-            <Route path="scopes" element={<ScopesPage />} />
-            <Route path="users" element={<UsersPage />} />
-            <Route path="roles" element={<RolesPage />} />
-            <Route path="*" element={<DashboardPage />} />
-          </Routes>
-        </AdminLayout>
+        <ApplicationsProvider>
+          <AdminLayout>
+            <Routes>
+              <Route index element={<DashboardPage />} />
+              <Route path="applications" element={<ApplicationsPage />} />
+              <Route path="applications/:id" element={<ApplicationDetailPage />} />
+              <Route path="scopes" element={<ScopesPage />} />
+              <Route path="users" element={<UsersPage />} />
+              <Route path="roles" element={<RolesPage />} />
+              <Route path="*" element={<DashboardPage />} />
+            </Routes>
+          </AdminLayout>
+        </ApplicationsProvider>
       </RequireAdmin>
     </AuthProvider>
   )
@@ -73,47 +81,195 @@ function Centered({ children }: { children: ReactNode }) {
   return <div className="mx-auto mt-24 max-w-md px-4 text-center">{children}</div>
 }
 
-const nav = [
-  { to: '/admin', label: 'Dashboard', end: true },
-  { to: '/admin/applications', label: 'Applications' },
-  { to: '/admin/scopes', label: 'Scopes' },
-  { to: '/admin/users', label: 'Users' },
-  { to: '/admin/roles', label: 'Roles' },
-]
+function ApplicationsProvider({ children }: { children: ReactNode }) {
+  const [apps, setApps] = useState<Application[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const reload = useCallback(() => {
+    adminApi.applications
+      .list()
+      .then((list) => {
+        setApps(list)
+        setError(null)
+      })
+      .catch((err) => setError(errorMessage(err)))
+  }, [])
+  useEffect(reload, [reload])
+
+  const value = useMemo(() => ({ apps, error, reload }), [apps, error, reload])
+  return <ApplicationsContext.Provider value={value}>{children}</ApplicationsContext.Provider>
+}
 
 function AdminLayout({ children }: { children: ReactNode }) {
-  const auth = useAuth()
-  const profile = auth.user?.profile
+  const location = useLocation()
+  // The mobile menu remembers the page it was opened on, so navigating anywhere closes it.
+  const [menuOpenOn, setMenuOpenOn] = useState<string | null>(null)
+  const menuOpen = menuOpenOn === location.pathname
+  const setMenuOpen = (open: boolean) => setMenuOpenOn(open ? location.pathname : null)
 
   return (
-    <div className="min-h-full">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
-          <div className="flex items-center gap-2 font-semibold">
-            <img src="/favicon.svg" alt="" className="size-6" />
-            <span className="hidden sm:inline">IDP Admin</span>
+    <div className="flex min-h-full">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-line bg-[#f7f7f3] lg:block">
+        <Sidebar />
+      </aside>
+
+      {menuOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden" onMouseDown={() => setMenuOpen(false)}>
+          <div className="absolute inset-0 bg-stone-900/40" />
+          <aside className="absolute inset-y-0 left-0 w-72 border-r border-line bg-[#f7f7f3] shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
+            <Sidebar />
+          </aside>
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-line bg-canvas/90 px-4 backdrop-blur sm:px-6">
+          <button
+            className="-ml-1 rounded-md p-1.5 text-stone-600 hover:bg-stone-900/5 lg:hidden"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+          >
+            <MenuIcon />
+          </button>
+          <Breadcrumbs />
+        </header>
+        <main className="w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-10">{children}</main>
+      </div>
+    </div>
+  )
+}
+
+function Sidebar() {
+  const auth = useAuth()
+  const { apps } = useApplications()
+  const email = auth.user?.profile.email ?? ''
+
+  return (
+    <div className="flex h-full flex-col">
+      <Link to="/admin" className="flex items-center gap-2.5 px-4 pt-4 pb-3">
+        <img src="/favicon.svg" alt="" className="size-7" />
+        <div className="leading-tight">
+          <div className="font-bold tracking-tight">LAHI IDP</div>
+          <div className="text-xs text-stone-500">Admin console</div>
+        </div>
+      </Link>
+
+      <nav className="flex-1 space-y-5 overflow-y-auto px-2.5 py-2" aria-label="Admin">
+        <div className="space-y-0.5">
+          <SideLink to="/admin" end icon={<HomeIcon />}>Dashboard</SideLink>
+        </div>
+
+        <div>
+          <div className="mb-1 flex items-center justify-between px-2.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">Applications</span>
+            <Link
+              to="/admin/applications?add=1"
+              className="rounded p-0.5 text-stone-500 hover:bg-stone-900/5 hover:text-stone-900"
+              title="Add application"
+              aria-label="Add application"
+            >
+              <PlusIcon />
+            </Link>
           </div>
-          <nav className="flex flex-1 gap-1 overflow-x-auto">
-            {nav.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  `whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ${isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-slate-500 md:inline">{profile?.email}</span>
-            <Button variant="secondary" size="sm" onClick={() => void auth.signoutRedirect()}>Sign out</Button>
+          <div className="space-y-0.5">
+            <SideLink to="/admin/applications" end icon={<AppsIcon />}>All applications</SideLink>
+            {apps?.map((app) => {
+              const name = app.displayName ?? app.clientId
+              return (
+                <SideLink key={app.id} to={`/admin/applications/${app.id}`} icon={<AppIcon name={name} size="xs" />}>
+                  <span className="flex-1 truncate">{name}</span>
+                  {app.grantTypes.includes('authorization_code') && (
+                    <span className="rounded-full bg-stone-900/5 px-1.5 text-[11px] tabular-nums text-stone-600">{app.userCount}</span>
+                  )}
+                </SideLink>
+              )
+            })}
           </div>
         </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+
+        <div>
+          <div className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500">Identity</div>
+          <div className="space-y-0.5">
+            <SideLink to="/admin/users" icon={<UsersIcon />}>Users</SideLink>
+            <SideLink to="/admin/roles" icon={<RolesIcon />}>Roles</SideLink>
+            <SideLink to="/admin/scopes" icon={<ScopesIcon />}>Scopes</SideLink>
+          </div>
+        </div>
+      </nav>
+
+      <div className="flex items-center gap-2.5 border-t border-line px-4 py-3">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-stone-800 text-sm font-semibold text-white">
+          {email.charAt(0).toUpperCase() || '?'}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium">{email}</div>
+          <div className="text-xs text-stone-500">Administrator</div>
+        </div>
+        <button
+          className="rounded-md p-1.5 text-stone-500 hover:bg-stone-900/5 hover:text-stone-900"
+          onClick={() => void auth.signoutRedirect()}
+          title="Sign out"
+          aria-label="Sign out"
+        >
+          <SignOutIcon />
+        </button>
+      </div>
     </div>
+  )
+}
+
+function SideLink({ to, end, icon, children }: { to: string; end?: boolean; icon: ReactNode; children: ReactNode }) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) =>
+        `flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm ${
+          isActive ? 'bg-white font-semibold text-stone-900 shadow-[0_1px_0_0_var(--color-line)] ring-1 ring-line' : 'text-stone-700 hover:bg-stone-900/5 hover:text-stone-900'
+        }`
+      }
+    >
+      {icon}
+      {children}
+    </NavLink>
+  )
+}
+
+const sections: Record<string, string> = {
+  applications: 'Applications',
+  users: 'Users',
+  roles: 'Roles',
+  scopes: 'Scopes',
+}
+
+/** "LAHI IDP / Applications / Moodle", built from the URL. */
+function Breadcrumbs() {
+  const location = useLocation()
+  const { apps } = useApplications()
+  const [, , section, id] = location.pathname.split('/')
+
+  const crumbs: { label: string; to?: string }[] = [{ label: 'LAHI IDP', to: '/admin' }]
+  if (!section) crumbs.push({ label: 'Dashboard' })
+  else if (sections[section]) {
+    crumbs.push({ label: sections[section], to: id ? `/admin/${section}` : undefined })
+    if (id && section === 'applications') {
+      const app = apps?.find((a) => a.id === id)
+      crumbs.push({ label: app ? (app.displayName ?? app.clientId) : '…' })
+    }
+  }
+
+  return (
+    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm">
+      {crumbs.map((c, i) => (
+        <span key={i} className="flex min-w-0 items-center gap-1.5">
+          {i > 0 && <span className="text-stone-400">/</span>}
+          {c.to ? (
+            <Link to={c.to} className="truncate text-stone-500 hover:text-stone-900">{c.label}</Link>
+          ) : (
+            <span className="truncate font-semibold text-stone-900">{c.label}</span>
+          )}
+        </span>
+      ))}
+    </nav>
   )
 }

@@ -37,7 +37,7 @@ export function ConsentPage() {
         {[...params.entries()].map(([key, value]) => (
           <input key={key} type="hidden" name={key} value={value} />
         ))}
-        <p className="text-sm font-medium text-slate-700">This will allow it to:</p>
+        <p className="text-sm font-medium text-stone-700">This will allow it to:</p>
         <ul className="mt-3 space-y-3">
           {info.scopes.map((s) => (
             <li key={s.name} className="flex gap-3 text-sm">
@@ -45,8 +45,8 @@ export function ConsentPage() {
                 <path fillRule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.58l7.3-7.3a1 1 0 0 1 1.4 0Z" clipRule="evenodd" />
               </svg>
               <span>
-                <span className="text-slate-800">{s.displayName}</span>
-                {s.description && <span className="block text-xs text-slate-500">{s.description}</span>}
+                <span className="text-stone-800">{s.displayName}</span>
+                {s.description && <span className="block text-xs text-stone-500">{s.description}</span>}
               </span>
             </li>
           ))}

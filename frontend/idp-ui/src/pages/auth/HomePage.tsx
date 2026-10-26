@@ -30,7 +30,7 @@ export function HomePage() {
 
   return (
     <AuthLayout title={`Hi, ${me.name}`} subtitle={<>Signed in as <strong>{me.email}</strong></>}>
-      <p className="text-sm text-slate-600">You are signed in. Applications connected to this identity provider will sign you in automatically.</p>
+      <p className="text-sm text-stone-600">You are signed in. Applications connected to this identity provider will sign you in automatically.</p>
       <div className="mt-6 flex flex-col gap-2">
         {me.roles.includes('Admin') && (
           <Button onClick={() => navigate('/admin')}>Open admin console</Button>

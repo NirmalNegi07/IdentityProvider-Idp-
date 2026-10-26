@@ -22,9 +22,24 @@ export interface Application {
   scopes: string[]
   requirePkce: boolean
   isSystem: boolean
+  /** Users who currently have access to this application. */
+  userCount: number
 }
 
-export type ApplicationInput = Omit<Application, 'id' | 'isSystem'> & { clientSecret?: string | null }
+export type ApplicationInput = Omit<Application, 'id' | 'isSystem' | 'userCount'> & { clientSecret?: string | null }
+
+/** A user as seen from one application. */
+export interface ApplicationUser {
+  id: string
+  email: string
+  firstName: string | null
+  lastName: string | null
+  roles: string[]
+  isLockedOut: boolean
+  hasAccess: boolean
+  firstAccessAt: string | null
+  lastUsedAt: string | null
+}
 
 export interface ApplicationWithSecret {
   application: Application
@@ -97,10 +112,18 @@ export const adminApi = {
 
   applications: {
     list: () => request<Application[]>('GET', '/applications'),
+    get: (id: string) => request<Application>('GET', `/applications/${id}`),
     create: (input: ApplicationInput) => request<ApplicationWithSecret>('POST', '/applications', input),
     update: (id: string, input: ApplicationInput) => request<ApplicationWithSecret>('PUT', `/applications/${id}`, input),
     rotateSecret: (id: string) => request<ApplicationWithSecret>('POST', `/applications/${id}/rotate-secret`),
     remove: (id: string) => request<void>('DELETE', `/applications/${id}`),
+    users: (id: string, params: { search?: string; page: number; pageSize: number }) =>
+      request<Paged<ApplicationUser>>(
+        'GET',
+        `/applications/${id}/users?${new URLSearchParams({ search: params.search ?? '', page: String(params.page), pageSize: String(params.pageSize) })}`,
+      ),
+    grantUser: (id: string, userId: string) => request<void>('POST', `/applications/${id}/users`, { userId }),
+    revokeUser: (id: string, userId: string) => request<void>('DELETE', `/applications/${id}/users/${userId}`),
   },
 
   scopes: {

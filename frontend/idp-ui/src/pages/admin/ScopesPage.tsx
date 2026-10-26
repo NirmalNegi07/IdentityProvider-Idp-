@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Alert, Badge, Button, Card, ConfirmDialog, EmptyState, Field, Input, linesToList, LoadingBlock, Modal, PageHeader, Textarea } from '../../components/ui'
+import { table } from '../../components/table'
 import { adminApi, type Scope, type ScopeInput } from '../../lib/adminApi'
 import { errorMessage } from '../../lib/http'
 
@@ -50,7 +51,7 @@ export function ScopesPage() {
           <EmptyState>No custom scopes yet.</EmptyState>
         ) : (
           <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+            <thead className={table.head}>
               <tr>
                 <th className="px-5 py-3">Name</th>
                 <th className="hidden px-5 py-3 md:table-cell">Description</th>
@@ -58,14 +59,14 @@ export function ScopesPage() {
                 <th className="px-5 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className={table.body}>
               {scopes.map((s) => (
-                <tr key={s.id}>
+                <tr key={s.id} className={table.row}>
                   <td className="px-5 py-3">
                     <div className="font-mono text-xs font-medium">{s.name}</div>
-                    <div className="text-xs text-slate-500">{s.displayName}</div>
+                    <div className="text-xs text-stone-500">{s.displayName}</div>
                   </td>
-                  <td className="hidden px-5 py-3 text-slate-600 md:table-cell">{s.description}</td>
+                  <td className="hidden px-5 py-3 text-stone-600 md:table-cell">{s.description}</td>
                   <td className="px-5 py-3">
                     <div className="flex flex-wrap gap-1">{s.resources.map((r) => <Badge key={r}>{r}</Badge>)}</div>
                   </td>
