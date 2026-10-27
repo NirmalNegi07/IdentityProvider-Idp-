@@ -94,14 +94,14 @@ export function UsersPage() {
                   <tr key={u.id} className={table.row}>
                     <td className="px-5 py-3">
                       <div className="font-medium">{[u.firstName, u.lastName].filter(Boolean).join(' ') || '—'}</div>
-                      <div className="text-xs text-stone-500">{u.email}</div>
+                      <div className="text-xs text-base-500">{u.email}</div>
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex flex-wrap gap-1">
                         {u.roles.map((r) => <Badge key={r} tone={r === 'Admin' ? 'brand' : 'neutral'}>{r}</Badge>)}
                       </div>
                     </td>
-                    <td className="hidden whitespace-nowrap px-5 py-3 text-stone-500 lg:table-cell">{formatDate(u.lastLoginAt)}</td>
+                    <td className="hidden whitespace-nowrap px-5 py-3 text-base-500 lg:table-cell">{formatDate(u.lastLoginAt)}</td>
                     <td className="px-5 py-3">
                       {u.isLockedOut ? <Badge tone="red">Locked</Badge> : <Badge tone="green">Active</Badge>}
                     </td>
@@ -116,7 +116,7 @@ export function UsersPage() {
                             <Button variant="secondary" size="sm" onClick={() => run(() => adminApi.users.lock(u.id))}>Lock</Button>
                           ))}
                         {u.id !== currentUserId && (
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setDeleting(u)}>Delete</Button>
+                          <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10" onClick={() => setDeleting(u)}>Delete</Button>
                         )}
                       </div>
                     </td>
@@ -127,7 +127,7 @@ export function UsersPage() {
           </div>
         )}
         {data && data.total > PAGE_SIZE && (
-          <div className="flex items-center justify-between border-t border-line px-5 py-3 text-sm text-stone-500">
+          <div className="flex items-center justify-between border-t border-line px-5 py-3 text-sm text-base-500">
             <span>
               {data.total} users · page {page} of {totalPages}
             </span>
@@ -226,7 +226,7 @@ function UserForm({ user, roles, onClose, onSaved }: { user: User | null; roles:
         )}
         <Checkbox label="Email confirmed" checked={input.emailConfirmed} onChange={(e) => setInput({ ...input, emailConfirmed: e.target.checked })} />
         <fieldset>
-          <legend className="mb-2 text-sm font-medium text-stone-700">Roles</legend>
+          <legend className="mb-2 text-sm font-medium text-base-700">Roles</legend>
           <div className="grid grid-cols-2 gap-2">
             {roles.map((r) => (
               <Checkbox key={r.id} label={r.name} checked={input.roles.includes(r.name)} onChange={() => toggleRole(r.name)} />

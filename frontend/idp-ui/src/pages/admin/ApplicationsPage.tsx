@@ -158,41 +158,58 @@ function ApplicationCard({ app }: { app: Application }) {
   const signsUsersIn = app.grantTypes.includes('authorization_code')
   return (
     <Link to={`/admin/applications/${app.id}`} className="group">
-      <Card className="flex h-full flex-col p-5 shadow-[0_2px_0_0_var(--color-line)] transition-[border-color,transform] group-hover:-translate-y-0.5 group-hover:border-stone-400">
-        <div className="flex items-start gap-3">
-          <AppIcon name={name} />
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-medium text-stone-900">{name}</div>
-            <div className="truncate font-mono text-xs text-stone-500">{app.clientId}</div>
+      <Card className="flex h-full flex-col overflow-hidden shadow-[0_2px_0_0_var(--color-line)] transition-[border-color,transform] group-hover:-translate-y-0.5 group-hover:border-base-400">
+        <div className={`h-16 bg-linear-to-br ${appColor(name).banner}`} aria-hidden />
+        <div className="flex flex-1 flex-col px-5 pb-5">
+          <div className="-mt-6 flex items-end gap-3">
+            <div className="rounded-xl ring-4 ring-surface">
+              <AppIcon name={name} size="lg" />
+            </div>
+            <div className="min-w-0 flex-1 pb-0.5">
+              <div className="truncate font-semibold text-base-900">{name}</div>
+              <div className="truncate font-mono text-xs text-base-500">{app.clientId}</div>
+            </div>
           </div>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          <Badge tone={app.clientType === 'confidential' ? 'brand' : 'neutral'}>{app.clientType}</Badge>
-          {app.requirePkce && <Badge>PKCE</Badge>}
-          {app.isSystem && <Badge tone="amber">system</Badge>}
-        </div>
-        <div className="mt-auto flex items-center justify-between border-t border-stone-100 pt-3 text-sm">
-          <span className="text-stone-600">
-            {signsUsersIn ? (
-              <><span className="font-semibold tabular-nums text-stone-900">{app.userCount}</span> {app.userCount === 1 ? 'user' : 'users'}</>
-            ) : (
-              'Service app, no users'
-            )}
-          </span>
-          <span className="font-semibold text-orange-700 group-hover:text-orange-800">Open →</span>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <Badge tone={app.clientType === 'confidential' ? 'brand' : 'neutral'}>{app.clientType}</Badge>
+            {app.requirePkce && <Badge>PKCE</Badge>}
+            {app.isSystem && <Badge tone="amber">system</Badge>}
+          </div>
+          <div className="mt-auto flex items-center justify-between border-t border-line/70 pt-3 text-sm">
+            <span className="text-base-600">
+              {signsUsersIn ? (
+                <><span className="font-semibold tabular-nums text-base-900">{app.userCount}</span> {app.userCount === 1 ? 'user' : 'users'}</>
+              ) : (
+                'Service app, no users'
+              )}
+            </span>
+            <span className="font-semibold text-accent-text group-hover:text-accent-text-hover">Open →</span>
+          </div>
         </div>
       </Card>
     </Link>
   )
 }
 
+// Each application gets a stable colour from its name: a solid icon and a matching banner.
+const APP_COLORS = [
+  { icon: 'bg-accent-600 text-accent-fg', banner: 'from-accent-500 to-accent-300' },
+  { icon: 'bg-teal-600 text-white', banner: 'from-teal-500 to-emerald-300' },
+  { icon: 'bg-amber-500 text-amber-950', banner: 'from-amber-400 to-yellow-200' },
+  { icon: 'bg-rose-600 text-white', banner: 'from-rose-500 to-pink-300' },
+  { icon: 'bg-sky-600 text-white', banner: 'from-sky-500 to-cyan-300' },
+  { icon: 'bg-violet-600 text-white', banner: 'from-violet-500 to-fuchsia-300' },
+]
+
+function appColor(name: string) {
+  return APP_COLORS[[...name].reduce((sum, c) => sum + c.charCodeAt(0), 0) % APP_COLORS.length]
+}
+
 /** A coloured initial, so applications are easy to tell apart at a glance. */
 export function AppIcon({ name, size = 'md' }: { name: string; size?: 'xs' | 'md' | 'lg' }) {
-  const palette = ['bg-orange-100 text-orange-800', 'bg-teal-100 text-teal-800', 'bg-amber-100 text-amber-900', 'bg-rose-100 text-rose-800', 'bg-sky-100 text-sky-800']
-  const tone = palette[[...name].reduce((sum, c) => sum + c.charCodeAt(0), 0) % palette.length]
   const sizes = { xs: 'size-[18px] rounded text-[10px]', md: 'size-10 rounded-lg text-base', lg: 'size-12 rounded-lg text-xl' }
   return (
-    <div className={`flex shrink-0 items-center justify-center font-bold ${tone} ${sizes[size]}`} aria-hidden>
+    <div className={`flex shrink-0 items-center justify-center font-bold ${appColor(name).icon} ${sizes[size]}`} aria-hidden>
       {name.trim().charAt(0).toUpperCase() || '?'}
     </div>
   )
@@ -273,17 +290,17 @@ export function ApplicationForm({
 
         {!app && (
           <div>
-            <div className="mb-2 text-sm font-medium text-stone-700">Start from a template</div>
+            <div className="mb-2 text-sm font-medium text-base-700">Start from a template</div>
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               {PRESETS.map((p) => (
                 <button
                   type="button"
                   key={p.label}
                   onClick={() => applyPreset(p)}
-                  className="rounded-md p-2.5 text-left ring-1 ring-stone-200 hover:bg-orange-50 hover:ring-orange-300"
+                  className="rounded-md p-2.5 text-left ring-1 ring-base-200 hover:bg-accent-50 hover:ring-accent-300"
                 >
                   <div className="text-sm font-medium">{p.label}</div>
-                  <div className="mt-0.5 text-xs text-stone-500">{p.description}</div>
+                  <div className="mt-0.5 text-xs text-base-500">{p.description}</div>
                 </button>
               ))}
             </div>
@@ -321,7 +338,7 @@ export function ApplicationForm({
         </div>
 
         <fieldset>
-          <legend className="mb-2 text-sm font-medium text-stone-700">Grant types</legend>
+          <legend className="mb-2 text-sm font-medium text-base-700">Grant types</legend>
           <div className="space-y-2">
             {GRANT_TYPES.map((g) => (
               <Checkbox
@@ -348,7 +365,7 @@ export function ApplicationForm({
         )}
 
         <fieldset>
-          <legend className="mb-2 text-sm font-medium text-stone-700">Allowed scopes</legend>
+          <legend className="mb-2 text-sm font-medium text-base-700">Allowed scopes</legend>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
             {scopeNames.map((s) => (
               <Checkbox

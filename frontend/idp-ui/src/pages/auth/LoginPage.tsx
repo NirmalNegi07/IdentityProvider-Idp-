@@ -43,7 +43,7 @@ export function LoginPage() {
         allowRegistration && (
           <>
             Don&apos;t have an account?{' '}
-            <Link to={registerLink} className="font-medium text-orange-700 hover:text-orange-600">Create one</Link>
+            <Link to={registerLink} className="font-medium text-accent-text hover:text-accent-text-hover">Create one</Link>
           </>
         )
       }

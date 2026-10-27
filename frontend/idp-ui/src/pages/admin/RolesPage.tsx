@@ -65,10 +65,10 @@ export function RolesPage() {
               <li key={r.id} className="flex items-center gap-3 px-5 py-3">
                 <span className="flex-1 font-medium">{r.name}</span>
                 {r.isSystem && <Badge tone="amber">built-in</Badge>}
-                <span className="w-20 text-right text-sm text-stone-500">{r.userCount} {r.userCount === 1 ? 'user' : 'users'}</span>
+                <span className="w-20 text-right text-sm text-base-500">{r.userCount} {r.userCount === 1 ? 'user' : 'users'}</span>
                 <div className="w-16 text-right">
                   {!r.isSystem && (
-                    <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setDeleting(r)}>Delete</Button>
+                    <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10" onClick={() => setDeleting(r)}>Delete</Button>
                   )}
                 </div>
               </li>

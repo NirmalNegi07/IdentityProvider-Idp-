@@ -1,10 +1,210 @@
 @import "tailwindcss";
 
+/* `dark:` utilities follow the theme picker (html[data-mode]), not only the OS setting. */
+@custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
+
+/*
+ * Theming. Pages only use these semantic colours:
+ *   accent-*  the brand colour scale (buttons, active states)   base-*  the grey scale (text, borders, fills)
+ *   canvas / surface / sidebar / line                           page, cards, sidebar, hairlines
+ *   accent-text(-hover) / accent-fg                             readable links, text on accent buttons
+ * Each theme below only sets the raw values (--a-*, --b-*, --*-l light, --*-d dark); dark mode remaps them.
+ */
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  /* Warm off-white page background and the hairline used for every border. */
-  --color-canvas: #eeefe9;
-  --color-line: #d6d6cc;
+
+  --color-accent-50: var(--a-50);
+  --color-accent-100: var(--a-100);
+  --color-accent-200: var(--a-200);
+  --color-accent-300: var(--a-300);
+  --color-accent-400: var(--a-400);
+  --color-accent-500: var(--a-500);
+  --color-accent-600: var(--a-600);
+  --color-accent-700: var(--a-700);
+  --color-accent-800: var(--a-800);
+  --color-accent-900: var(--a-900);
+  --color-accent-950: var(--a-950);
+  --color-accent-text: var(--a-700);
+  --color-accent-text-hover: var(--a-800);
+  --color-accent-fg: #ffffff;
+
+  --color-base-50: var(--b-50);
+  --color-base-100: var(--b-100);
+  --color-base-200: var(--b-200);
+  --color-base-300: var(--b-300);
+  --color-base-400: var(--b-400);
+  --color-base-500: var(--b-500);
+  --color-base-600: var(--b-600);
+  --color-base-700: var(--b-700);
+  --color-base-800: var(--b-800);
+  --color-base-900: var(--b-900);
+  --color-base-950: var(--b-950);
+
+  --color-canvas: var(--canvas-l);
+  --color-surface: var(--surface-l);
+  --color-sidebar: var(--sidebar-l);
+  --color-line: var(--line-l);
+
+  /* Sidebar: follows the page by default; colourful themes paint it (set --sb-*). */
+  --color-sidebar-fg: var(--sb-fg, var(--color-base-700));
+  --color-sidebar-muted: var(--sb-muted, var(--color-base-500));
+  --color-sidebar-hover: var(--sb-hover, color-mix(in oklab, var(--color-base-900) 6%, transparent));
+  --color-sidebar-active: var(--sb-active, color-mix(in oklab, var(--color-accent-500) 16%, transparent));
+  --color-sidebar-active-fg: var(--sb-active-fg, var(--color-accent-text));
+  --color-sidebar-line: var(--sb-line, var(--color-line));
+}
+
+/* ---------- Themes ---------- */
+
+/* PostHog-inspired (default): warm off-white, orange accent. */
+:root,
+[data-theme="posthog"] {
+  --a-50: #fff7ed; --a-100: #ffedd5; --a-200: #fed7aa; --a-300: #fdba74; --a-400: #fb923c; --a-500: #f97316;
+  --a-600: #ea580c; --a-700: #c2410c; --a-800: #9a3412; --a-900: #7c2d12; --a-950: #431407;
+  --b-50: #fafaf9; --b-100: #f5f5f4; --b-200: #e7e5e4; --b-300: #d6d3d1; --b-400: #a8a29e; --b-500: #78716c;
+  --b-600: #57534e; --b-700: #44403c; --b-800: #292524; --b-900: #1c1917; --b-950: #0c0a09;
+  --canvas-l: #eeefe9; --surface-l: #ffffff; --sidebar-l: #f7f7f3; --line-l: #d6d6cc;
+  --canvas-d: #1d1f27; --surface-d: #24262e; --sidebar-d: #191b22; --line-d: #393b44;
+}
+
+/* GitHub-inspired: cool greys, green primary. */
+[data-theme="github"] {
+  --a-50: #f0fdf4; --a-100: #dcfce7; --a-200: #bbf7d0; --a-300: #86efac; --a-400: #4ade80; --a-500: #22c55e;
+  --a-600: #16a34a; --a-700: #15803d; --a-800: #166534; --a-900: #14532d; --a-950: #052e16;
+  --b-50: #f8fafc; --b-100: #f1f5f9; --b-200: #e2e8f0; --b-300: #cbd5e1; --b-400: #94a3b8; --b-500: #64748b;
+  --b-600: #475569; --b-700: #334155; --b-800: #1e293b; --b-900: #0f172a; --b-950: #020617;
+  --canvas-l: #f6f8fa; --surface-l: #ffffff; --sidebar-l: #f6f8fa; --line-l: #d1d9e0;
+  --canvas-d: #0d1117; --surface-d: #151b23; --sidebar-d: #010409; --line-d: #3d444d;
+}
+
+/* Linear-inspired: neutral zinc, indigo accent. */
+[data-theme="linear"] {
+  --a-50: #eef2ff; --a-100: #e0e7ff; --a-200: #c7d2fe; --a-300: #a5b4fc; --a-400: #818cf8; --a-500: #6366f1;
+  --a-600: #4f46e5; --a-700: #4338ca; --a-800: #3730a3; --a-900: #312e81; --a-950: #1e1b4b;
+  --b-50: #fafafa; --b-100: #f4f4f5; --b-200: #e4e4e7; --b-300: #d4d4d8; --b-400: #a1a1aa; --b-500: #71717a;
+  --b-600: #52525b; --b-700: #3f3f46; --b-800: #27272a; --b-900: #18181b; --b-950: #09090b;
+  --canvas-l: #f4f5f8; --surface-l: #ffffff; --sidebar-l: #f9f9fb; --line-l: #e0e0e6;
+  --canvas-d: #0f1011; --surface-d: #17181b; --sidebar-d: #0a0b0c; --line-d: #2a2b30;
+}
+
+/* Atlassian-inspired (Jira, Confluence): slate greys, blue accent. */
+[data-theme="atlassian"] {
+  --a-50: #eff6ff; --a-100: #dbeafe; --a-200: #bfdbfe; --a-300: #93c5fd; --a-400: #60a5fa; --a-500: #3b82f6;
+  --a-600: #2563eb; --a-700: #1d4ed8; --a-800: #1e40af; --a-900: #1e3a8a; --a-950: #172554;
+  --b-50: #f8fafc; --b-100: #f1f5f9; --b-200: #e2e8f0; --b-300: #cbd5e1; --b-400: #94a3b8; --b-500: #64748b;
+  --b-600: #475569; --b-700: #334155; --b-800: #1e293b; --b-900: #0f172a; --b-950: #020617;
+  --canvas-l: #f7f8f9; --surface-l: #ffffff; --sidebar-l: #fafbfc; --line-l: #dcdfe4;
+  --canvas-d: #1d2125; --surface-d: #22272b; --sidebar-d: #191c20; --line-d: #38414a;
+}
+
+/* Vercel-inspired: monochrome, black buttons (white in dark mode). */
+[data-theme="vercel"] {
+  --a-50: #fafafa; --a-100: #f5f5f5; --a-200: #e5e5e5; --a-300: #d4d4d4; --a-400: #a3a3a3; --a-500: #737373;
+  --a-600: #404040; --a-700: #171717; --a-800: #000000; --a-900: #000000; --a-950: #000000;
+  --b-50: #fafafa; --b-100: #f5f5f5; --b-200: #e5e5e5; --b-300: #d4d4d4; --b-400: #a3a3a3; --b-500: #737373;
+  --b-600: #525252; --b-700: #404040; --b-800: #262626; --b-900: #171717; --b-950: #0a0a0a;
+  --canvas-l: #fafafa; --surface-l: #ffffff; --sidebar-l: #fafafa; --line-l: #e5e5e5;
+  --canvas-d: #000000; --surface-d: #0a0a0a; --sidebar-d: #000000; --line-d: #2e2e2e;
+}
+
+/* ---------- Colourful themes: painted sidebars and tinted pages ---------- */
+
+/* Slack-inspired: aubergine sidebar, blue active item, green buttons. */
+[data-theme="slack"] {
+  --a-50: #ecfdf5; --a-100: #d1fae5; --a-200: #a7f3d0; --a-300: #6ee7b7; --a-400: #34d399; --a-500: #10b981;
+  --a-600: #059669; --a-700: #047857; --a-800: #065f46; --a-900: #064e3b; --a-950: #022c22;
+  --b-50: #fafafa; --b-100: #f4f4f5; --b-200: #e4e4e7; --b-300: #d4d4d8; --b-400: #a1a1aa; --b-500: #71717a;
+  --b-600: #52525b; --b-700: #3f3f46; --b-800: #27272a; --b-900: #18181b; --b-950: #09090b;
+  --canvas-l: #f7f2f7; --surface-l: #ffffff; --sidebar-l: #4a154b; --line-l: #e3d6e3;
+  --canvas-d: #1a1d21; --surface-d: #222529; --sidebar-d: #3f0e40; --line-d: #393c41;
+  --sb-fg: #ffffff; --sb-muted: rgb(255 255 255 / 0.68); --sb-hover: rgb(255 255 255 / 0.1);
+  --sb-active: #1164a3; --sb-active-fg: #ffffff; --sb-line: rgb(255 255 255 / 0.14);
+}
+
+/* Discord-inspired: blurple everywhere. */
+[data-theme="discord"] {
+  --a-50: #eef0ff; --a-100: #e0e3ff; --a-200: #c6cbff; --a-300: #a3aafd; --a-400: #7f88f8; --a-500: #6873f4;
+  --a-600: #5865f2; --a-700: #4752c4; --a-800: #3c45a5; --a-900: #313884; --a-950: #1e2252;
+  --b-50: #fafafa; --b-100: #f4f4f5; --b-200: #e4e4e7; --b-300: #d4d4d8; --b-400: #a1a1aa; --b-500: #71717a;
+  --b-600: #52525b; --b-700: #3f3f46; --b-800: #27272a; --b-900: #18181b; --b-950: #09090b;
+  --canvas-l: #eef0fb; --surface-l: #ffffff; --sidebar-l: #404eed; --line-l: #d8dbf3;
+  --canvas-d: #313338; --surface-d: #2b2d31; --sidebar-d: #1e1f22; --line-d: #3f4147;
+  --sb-fg: #ffffff; --sb-muted: rgb(255 255 255 / 0.7); --sb-hover: rgb(255 255 255 / 0.12);
+  --sb-active: rgb(255 255 255 / 0.22); --sb-active-fg: #ffffff; --sb-line: rgb(255 255 255 / 0.16);
+}
+
+/* Spotify-inspired: black sidebar, bright green. */
+[data-theme="spotify"] {
+  --a-50: #edfcf2; --a-100: #d3f8e0; --a-200: #aaf0c6; --a-300: #73e2a5; --a-400: #3acc81; --a-500: #1db954;
+  --a-600: #169c46; --a-700: #117a37; --a-800: #11612f; --a-900: #0f5028; --a-950: #052d15;
+  --b-50: #fafafa; --b-100: #f5f5f5; --b-200: #e5e5e5; --b-300: #d4d4d4; --b-400: #a3a3a3; --b-500: #737373;
+  --b-600: #525252; --b-700: #404040; --b-800: #262626; --b-900: #171717; --b-950: #0a0a0a;
+  --canvas-l: #eef8f1; --surface-l: #ffffff; --sidebar-l: #000000; --line-l: #d3e6d9;
+  --canvas-d: #121212; --surface-d: #181818; --sidebar-d: #000000; --line-d: #2a2a2a;
+  --sb-fg: #ffffff; --sb-muted: #b3b3b3; --sb-hover: rgb(255 255 255 / 0.08);
+  --sb-active: rgb(29 185 84 / 0.22); --sb-active-fg: #1ed760; --sb-line: #282828;
+}
+
+/* Stripe-inspired: deep navy sidebar, violet accent. */
+[data-theme="stripe"] {
+  --a-50: #f1f0ff; --a-100: #e5e3ff; --a-200: #cdc9ff; --a-300: #aaa3ff; --a-400: #8a80ff; --a-500: #7a73ff;
+  --a-600: #635bff; --a-700: #5249e0; --a-800: #4339b8; --a-900: #372f92; --a-950: #211b59;
+  --b-50: #f8fafc; --b-100: #f1f5f9; --b-200: #e2e8f0; --b-300: #cbd5e1; --b-400: #94a3b8; --b-500: #64748b;
+  --b-600: #475569; --b-700: #334155; --b-800: #1e293b; --b-900: #0f172a; --b-950: #020617;
+  --canvas-l: #f1f4fb; --surface-l: #ffffff; --sidebar-l: #0a2540; --line-l: #dbe1ee;
+  --canvas-d: #0b1220; --surface-d: #111a2e; --sidebar-d: #061528; --line-d: #24324d;
+  --sb-fg: #ffffff; --sb-muted: #adbdcc; --sb-hover: rgb(255 255 255 / 0.08);
+  --sb-active: #635bff; --sb-active-fg: #ffffff; --sb-line: rgb(255 255 255 / 0.12);
+}
+
+/* Twitch-inspired: purple on near-black. */
+[data-theme="twitch"] {
+  --a-50: #f5f0ff; --a-100: #ece2ff; --a-200: #dbc9ff; --a-300: #c1a2ff; --a-400: #a978ff; --a-500: #9a5cff;
+  --a-600: #9146ff; --a-700: #772ce8; --a-800: #5c16c5; --a-900: #451093; --a-950: #2a0a5c;
+  --b-50: #fafafa; --b-100: #f4f4f5; --b-200: #e4e4e7; --b-300: #d4d4d8; --b-400: #a1a1aa; --b-500: #71717a;
+  --b-600: #52525b; --b-700: #3f3f46; --b-800: #27272a; --b-900: #18181b; --b-950: #09090b;
+  --canvas-l: #f5f0ff; --surface-l: #ffffff; --sidebar-l: #1f1f23; --line-l: #e2d8f5;
+  --canvas-d: #0e0e10; --surface-d: #18181b; --sidebar-d: #1f1f23; --line-d: #2f2f35;
+  --sb-fg: #efeff1; --sb-muted: #adadb8; --sb-hover: rgb(255 255 255 / 0.08);
+  --sb-active: #9146ff; --sb-active-fg: #ffffff; --sb-line: rgb(255 255 255 / 0.1);
+}
+
+/* ---------- Dark mode: flip the grey scale, swap surfaces, soften accent fills ---------- */
+
+[data-mode="dark"] {
+  color-scheme: dark;
+  --color-base-50: var(--b-950);
+  --color-base-100: var(--b-900);
+  --color-base-200: var(--b-800);
+  --color-base-300: var(--b-700);
+  --color-base-400: var(--b-500);
+  --color-base-500: var(--b-400);
+  --color-base-600: var(--b-300);
+  --color-base-700: var(--b-200);
+  --color-base-800: var(--b-100);
+  --color-base-900: var(--b-50);
+  --color-base-950: var(--b-50);
+
+  --color-canvas: var(--canvas-d);
+  --color-surface: var(--surface-d);
+  --color-sidebar: var(--sidebar-d);
+  --color-line: var(--line-d);
+
+  --color-accent-50: color-mix(in oklab, var(--a-500) 12%, transparent);
+  --color-accent-100: color-mix(in oklab, var(--a-500) 20%, transparent);
+  --color-accent-200: color-mix(in oklab, var(--a-500) 35%, transparent);
+  --color-accent-300: color-mix(in oklab, var(--a-500) 50%, transparent);
+  --color-accent-text: var(--a-400);
+  --color-accent-text-hover: var(--a-300);
+}
+
+[data-theme="vercel"][data-mode="dark"] {
+  --color-accent-700: #ededed;
+  --color-accent-800: #ffffff;
+  --color-accent-900: #a1a1a1;
+  --color-accent-fg: #0a0a0a;
+  --color-accent-text: #ededed;
+  --color-accent-text-hover: #ffffff;
 }
 
 html, body, #root {
@@ -12,5 +212,5 @@ html, body, #root {
 }
 
 body {
-  @apply bg-canvas text-stone-900 antialiased;
+  @apply bg-canvas text-base-900 antialiased;
 }

@@ -64,16 +64,16 @@ export function ScopesPage() {
                 <tr key={s.id} className={table.row}>
                   <td className="px-5 py-3">
                     <div className="font-mono text-xs font-medium">{s.name}</div>
-                    <div className="text-xs text-stone-500">{s.displayName}</div>
+                    <div className="text-xs text-base-500">{s.displayName}</div>
                   </td>
-                  <td className="hidden px-5 py-3 text-stone-600 md:table-cell">{s.description}</td>
+                  <td className="hidden px-5 py-3 text-base-600 md:table-cell">{s.description}</td>
                   <td className="px-5 py-3">
                     <div className="flex flex-wrap gap-1">{s.resources.map((r) => <Badge key={r}>{r}</Badge>)}</div>
                   </td>
                   <td className="whitespace-nowrap px-5 py-3 text-right">
                     <Button variant="secondary" size="sm" onClick={() => setEditing(s)}>Edit</Button>
                     {!s.isSystem && (
-                      <Button variant="ghost" size="sm" className="ml-2 text-red-600 hover:bg-red-50" onClick={() => setDeleting(s)}>Delete</Button>
+                      <Button variant="ghost" size="sm" className="ml-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10" onClick={() => setDeleting(s)}>Delete</Button>
                     )}
                   </td>
                 </tr>

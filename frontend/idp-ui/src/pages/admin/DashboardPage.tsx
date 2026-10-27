@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { AppsIcon, RolesIcon, ScopesIcon, UsersIcon } from '../../components/icons'
 import { Alert, Card, CopyField, EmptyState, LoadingBlock, PageHeader } from '../../components/ui'
 import { adminApi, type Stats } from '../../lib/adminApi'
 import { useApplications } from '../../lib/applications'
@@ -23,18 +24,18 @@ export function DashboardPage() {
       {!stats && !error && <LoadingBlock />}
       {stats && (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard label="Users" value={stats.users} sub={`${stats.newUsersLast7Days} new in the last 7 days`} to="/admin/users" />
-          <StatCard label="Applications" value={stats.applications} to="/admin/applications" />
-          <StatCard label="Custom scopes" value={stats.scopes} to="/admin/scopes" />
-          <StatCard label="Locked users" value={stats.lockedUsers} sub={`${stats.roles} roles defined`} to="/admin/users" />
+          <StatCard tone="accent" icon={<UsersIcon />} label="Users" value={stats.users} sub={`${stats.newUsersLast7Days} new in the last 7 days`} to="/admin/users" />
+          <StatCard tone="teal" icon={<AppsIcon />} label="Applications" value={stats.applications} to="/admin/applications" />
+          <StatCard tone="sky" icon={<ScopesIcon />} label="Custom scopes" value={stats.scopes} to="/admin/scopes" />
+          <StatCard tone="rose" icon={<RolesIcon />} label="Locked users" value={stats.lockedUsers} sub={`${stats.roles} roles defined`} to="/admin/users" />
         </div>
       )}
 
       <YourApplications />
 
       <Card className="mt-8 p-5">
-        <h2 className="text-base font-bold text-stone-900">Connection details for applications</h2>
-        <p className="mt-1 text-sm text-stone-500">
+        <h2 className="text-base font-bold text-base-900">Connection details for applications</h2>
+        <p className="mt-1 text-sm text-base-500">
           Most OpenID Connect libraries (and Moodle&apos;s OAuth 2 services) only need the issuer URL; everything else is discovered.
         </p>
         <dl className="mt-4 grid gap-4 md:grid-cols-2">
@@ -50,13 +51,24 @@ export function DashboardPage() {
   )
 }
 
-function StatCard({ label, value, sub, to }: { label: string; value: number; sub?: string; to: string }) {
+const STAT_TONES = {
+  accent: { chip: 'bg-accent-600 text-accent-fg', wash: 'from-accent-100' },
+  teal: { chip: 'bg-teal-600 text-white', wash: 'from-teal-100 dark:from-teal-500/15' },
+  sky: { chip: 'bg-sky-600 text-white', wash: 'from-sky-100 dark:from-sky-500/15' },
+  rose: { chip: 'bg-rose-600 text-white', wash: 'from-rose-100 dark:from-rose-500/15' },
+}
+
+function StatCard({ label, value, sub, to, icon, tone }: { label: string; value: number; sub?: string; to: string; icon: ReactNode; tone: keyof typeof STAT_TONES }) {
+  const t = STAT_TONES[tone]
   return (
     <Link to={to}>
-      <Card className="p-5 shadow-[0_2px_0_0_var(--color-line)] transition-[border-color,transform] hover:-translate-y-0.5 hover:border-stone-400">
-        <div className="text-xs font-semibold uppercase tracking-wide text-stone-500">{label}</div>
-        <div className="mt-1.5 text-3xl font-bold tabular-nums">{value}</div>
-        {sub && <div className="mt-1 text-xs text-stone-500">{sub}</div>}
+      <Card className={`h-full bg-linear-to-br ${t.wash} to-surface p-5 shadow-[0_2px_0_0_var(--color-line)] transition-[border-color,transform] hover:-translate-y-0.5 hover:border-base-400`}>
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-semibold uppercase tracking-wide text-base-600">{label}</div>
+          <span className={`flex size-8 items-center justify-center rounded-lg ${t.chip}`}>{icon}</span>
+        </div>
+        <div className="mt-2 text-3xl font-bold tabular-nums">{value}</div>
+        {sub && <div className="mt-1 text-xs text-base-600">{sub}</div>}
       </Card>
     </Link>
   )
@@ -65,7 +77,7 @@ function StatCard({ label, value, sub, to }: { label: string; value: number; sub
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="mb-1 text-xs font-medium text-stone-500">{label}</dt>
+      <dt className="mb-1 text-xs font-medium text-base-500">{label}</dt>
       <dd><CopyField value={value} /></dd>
     </div>
   )
@@ -76,14 +88,14 @@ function YourApplications() {
   return (
     <section className="mt-8">
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="text-base font-bold text-stone-900">Your applications</h2>
-        <Link to="/admin/applications" className="text-sm font-semibold text-orange-700 hover:text-orange-800">View all →</Link>
+        <h2 className="text-base font-bold text-base-900">Your applications</h2>
+        <Link to="/admin/applications" className="text-sm font-semibold text-accent-text hover:text-accent-text-hover">View all →</Link>
       </div>
       <Card>
         {!apps ? (
           <LoadingBlock />
         ) : apps.length === 0 ? (
-          <EmptyState>No applications yet. <Link to="/admin/applications?add=1" className="font-semibold text-orange-700">Add the first one</Link>.</EmptyState>
+          <EmptyState>No applications yet. <Link to="/admin/applications?add=1" className="font-semibold text-accent-text">Add the first one</Link>.</EmptyState>
         ) : (
           <ul className="divide-y divide-line/70">
             {apps.map((app) => {
@@ -95,13 +107,13 @@ function YourApplications() {
                     <AppIcon name={name} />
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-semibold">{name}</div>
-                      <div className="truncate font-mono text-xs text-stone-500">{app.clientId}</div>
+                      <div className="truncate font-mono text-xs text-base-500">{app.clientId}</div>
                     </div>
                     <div className="text-right text-sm">
                       {signsUsersIn ? (
-                        <><span className="font-bold tabular-nums">{app.userCount}</span> <span className="text-stone-500">{app.userCount === 1 ? 'user' : 'users'}</span></>
+                        <><span className="font-bold tabular-nums">{app.userCount}</span> <span className="text-base-500">{app.userCount === 1 ? 'user' : 'users'}</span></>
                       ) : (
-                        <span className="text-stone-500">Service app</span>
+                        <span className="text-base-500">Service app</span>
                       )}
                     </div>
                   </Link>

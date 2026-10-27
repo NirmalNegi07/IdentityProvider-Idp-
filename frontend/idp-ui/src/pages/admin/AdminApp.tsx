@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AuthProvider, useAuth } from 'react-oidc-context'
 import { Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { AppearancePicker } from '../../components/AppearancePicker'
 import { AppsIcon, HomeIcon, MenuIcon, PlusIcon, RolesIcon, ScopesIcon, SignOutIcon, UsersIcon } from '../../components/icons'
 import { Alert, Button, LoadingBlock } from '../../components/ui'
 import { adminApi, type Application } from '../../lib/adminApi'
@@ -109,23 +110,24 @@ function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-full">
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-line bg-[#f7f7f3] lg:block">
+      <aside className="sticky top-0 z-40 hidden h-screen w-64 shrink-0 border-r border-sidebar-line bg-sidebar text-sidebar-fg lg:block">
         <Sidebar />
       </aside>
 
       {menuOpen && (
         <div className="fixed inset-0 z-40 lg:hidden" onMouseDown={() => setMenuOpen(false)}>
-          <div className="absolute inset-0 bg-stone-900/40" />
-          <aside className="absolute inset-y-0 left-0 w-72 border-r border-line bg-[#f7f7f3] shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="absolute inset-0 bg-black/40" />
+          <aside className="absolute inset-y-0 left-0 w-72 border-r border-sidebar-line bg-sidebar text-sidebar-fg shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
             <Sidebar />
           </aside>
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-line bg-canvas/90 px-4 backdrop-blur sm:px-6">
+      <div className="relative flex min-w-0 flex-1 flex-col">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-linear-to-b from-accent-100 to-transparent" aria-hidden />
+        <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-line/60 bg-canvas/40 px-4 backdrop-blur sm:px-6">
           <button
-            className="-ml-1 rounded-md p-1.5 text-stone-600 hover:bg-stone-900/5 lg:hidden"
+            className="-ml-1 rounded-md p-1.5 text-base-600 hover:bg-base-900/5 lg:hidden"
             onClick={() => setMenuOpen(true)}
             aria-label="Open menu"
           >
@@ -133,7 +135,7 @@ function AdminLayout({ children }: { children: ReactNode }) {
           </button>
           <Breadcrumbs />
         </header>
-        <main className="w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-10">{children}</main>
+        <main className="relative w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-10">{children}</main>
       </div>
     </div>
   )
@@ -150,7 +152,7 @@ function Sidebar() {
         <img src="/favicon.svg" alt="" className="size-7" />
         <div className="leading-tight">
           <div className="font-bold tracking-tight">LAHI IDP</div>
-          <div className="text-xs text-stone-500">Admin console</div>
+          <div className="text-xs text-sidebar-muted">Admin console</div>
         </div>
       </Link>
 
@@ -161,10 +163,10 @@ function Sidebar() {
 
         <div>
           <div className="mb-1 flex items-center justify-between px-2.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">Applications</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">Applications</span>
             <Link
               to="/admin/applications?add=1"
-              className="rounded p-0.5 text-stone-500 hover:bg-stone-900/5 hover:text-stone-900"
+              className="rounded p-0.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg"
               title="Add application"
               aria-label="Add application"
             >
@@ -179,7 +181,7 @@ function Sidebar() {
                 <SideLink key={app.id} to={`/admin/applications/${app.id}`} icon={<AppIcon name={name} size="xs" />}>
                   <span className="flex-1 truncate">{name}</span>
                   {app.grantTypes.includes('authorization_code') && (
-                    <span className="rounded-full bg-stone-900/5 px-1.5 text-[11px] tabular-nums text-stone-600">{app.userCount}</span>
+                    <span className="rounded-full bg-sidebar-hover px-1.5 text-[11px] tabular-nums text-sidebar-muted">{app.userCount}</span>
                   )}
                 </SideLink>
               )
@@ -188,7 +190,7 @@ function Sidebar() {
         </div>
 
         <div>
-          <div className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500">Identity</div>
+          <div className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">Identity</div>
           <div className="space-y-0.5">
             <SideLink to="/admin/users" icon={<UsersIcon />}>Users</SideLink>
             <SideLink to="/admin/roles" icon={<RolesIcon />}>Roles</SideLink>
@@ -197,16 +199,17 @@ function Sidebar() {
         </div>
       </nav>
 
-      <div className="flex items-center gap-2.5 border-t border-line px-4 py-3">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-stone-800 text-sm font-semibold text-white">
+      <div className="flex items-center gap-2.5 border-t border-sidebar-line px-4 py-3">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-700 text-sm font-semibold text-accent-fg">
           {email.charAt(0).toUpperCase() || '?'}
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{email}</div>
-          <div className="text-xs text-stone-500">Administrator</div>
+          <div className="text-xs text-sidebar-muted">Administrator</div>
         </div>
+        <AppearancePicker inSidebar />
         <button
-          className="rounded-md p-1.5 text-stone-500 hover:bg-stone-900/5 hover:text-stone-900"
+          className="rounded-md p-1.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg"
           onClick={() => void auth.signoutRedirect()}
           title="Sign out"
           aria-label="Sign out"
@@ -225,7 +228,7 @@ function SideLink({ to, end, icon, children }: { to: string; end?: boolean; icon
       end={end}
       className={({ isActive }) =>
         `flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm ${
-          isActive ? 'bg-white font-semibold text-stone-900 shadow-[0_1px_0_0_var(--color-line)] ring-1 ring-line' : 'text-stone-700 hover:bg-stone-900/5 hover:text-stone-900'
+          isActive ? 'bg-sidebar-active font-semibold text-sidebar-active-fg' : 'text-sidebar-fg hover:bg-sidebar-hover'
         }`
       }
     >
@@ -262,11 +265,11 @@ function Breadcrumbs() {
     <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm">
       {crumbs.map((c, i) => (
         <span key={i} className="flex min-w-0 items-center gap-1.5">
-          {i > 0 && <span className="text-stone-400">/</span>}
+          {i > 0 && <span className="text-base-400">/</span>}
           {c.to ? (
-            <Link to={c.to} className="truncate text-stone-500 hover:text-stone-900">{c.label}</Link>
+            <Link to={c.to} className="truncate text-base-500 hover:text-base-900">{c.label}</Link>
           ) : (
-            <span className="truncate font-semibold text-stone-900">{c.label}</span>
+            <span className="truncate font-semibold text-base-900">{c.label}</span>
           )}
         </span>
       ))}

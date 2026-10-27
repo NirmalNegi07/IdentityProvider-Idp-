@@ -7,15 +7,15 @@ type Variant = 'primary' | 'secondary' | 'danger' | 'ghost'
 // Buttons sit on a darker bottom edge and press down when clicked.
 const variants: Record<Variant, string> = {
   primary:
-    'border border-orange-800 bg-orange-700 text-white shadow-[0_2px_0_0_var(--color-orange-900)] hover:bg-orange-800 ' +
-    'focus-visible:outline-orange-700 disabled:border-orange-300 disabled:bg-orange-300 disabled:shadow-none',
+    'border border-accent-800 bg-accent-700 text-accent-fg shadow-[0_2px_0_0_var(--color-accent-900)] hover:bg-accent-800 ' +
+    'focus-visible:outline-accent-700 disabled:border-accent-300 disabled:bg-accent-300 disabled:shadow-none',
   secondary:
-    'border border-line bg-white text-stone-800 shadow-[0_2px_0_0_var(--color-line)] hover:border-stone-400 ' +
-    'disabled:text-stone-400 disabled:shadow-none',
+    'border border-line bg-surface text-base-800 shadow-[0_2px_0_0_var(--color-line)] hover:border-base-400 ' +
+    'disabled:text-base-400 disabled:shadow-none',
   danger:
     'border border-red-800 bg-red-700 text-white shadow-[0_2px_0_0_var(--color-red-900)] hover:bg-red-800 ' +
     'focus-visible:outline-red-700 disabled:bg-red-300 disabled:shadow-none',
-  ghost: 'text-stone-600 hover:bg-stone-900/5 hover:text-stone-900',
+  ghost: 'text-base-600 hover:bg-base-900/5 hover:text-base-900',
 }
 
 export function Button({
@@ -58,17 +58,17 @@ export function Spinner({ className }: { className?: string }) {
 export function Field({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-sm font-medium text-stone-700">{label}</span>
+      <span className="block text-sm font-medium text-base-700">{label}</span>
       <div className="mt-1">{children}</div>
-      {hint && <span className="mt-1 block text-xs text-stone-500">{hint}</span>}
+      {hint && <span className="mt-1 block text-xs text-base-500">{hint}</span>}
     </label>
   )
 }
 
 const inputClass =
-  'block w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-stone-900 ' +
-  'placeholder:text-stone-400 hover:border-stone-400 focus:border-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-700/20 ' +
-  'disabled:bg-stone-100 disabled:text-stone-500'
+  'block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-base-900 ' +
+  'placeholder:text-base-400 hover:border-base-400 focus:border-accent-700 focus:outline-none focus:ring-2 focus:ring-accent-700/20 ' +
+  'disabled:bg-base-100 disabled:text-base-500'
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={cx(inputClass, className)} />
@@ -85,10 +85,10 @@ export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLS
 export function Checkbox({ label, description, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: ReactNode; description?: ReactNode }) {
   return (
     <label className="flex items-start gap-2.5 text-sm">
-      <input type="checkbox" {...props} className="mt-0.5 size-4 rounded border-stone-300 text-orange-700 accent-orange-700" />
+      <input type="checkbox" {...props} className="mt-0.5 size-4 rounded border-base-300 text-accent-text accent-accent-700" />
       <span>
-        <span className="font-medium text-stone-800">{label}</span>
-        {description && <span className="block text-xs text-stone-500">{description}</span>}
+        <span className="font-medium text-base-800">{label}</span>
+        {description && <span className="block text-xs text-base-500">{description}</span>}
       </span>
     </label>
   )
@@ -96,10 +96,10 @@ export function Checkbox({ label, description, ...props }: InputHTMLAttributes<H
 
 export function Alert({ kind = 'error', children }: { kind?: 'error' | 'success' | 'info' | 'warning'; children: ReactNode }) {
   const styles = {
-    error: 'bg-red-50 text-red-800 ring-red-200',
-    success: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
-    info: 'bg-sky-50 text-sky-800 ring-sky-200',
-    warning: 'bg-amber-50 text-amber-900 ring-amber-200',
+    error: 'bg-red-50 text-red-800 ring-red-200 dark:bg-red-500/10 dark:text-red-300 dark:ring-red-500/30',
+    success: 'bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30',
+    info: 'bg-sky-50 text-sky-800 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/30',
+    warning: 'bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30',
   }
   return <div role={kind === 'error' ? 'alert' : 'status'} className={cx('rounded-lg px-3.5 py-2.5 text-sm ring-1 ring-inset', styles[kind])}>{children}</div>
 }
@@ -108,25 +108,25 @@ export type BadgeTone = 'neutral' | 'brand' | 'green' | 'red' | 'amber'
 
 export function Badge({ tone = 'neutral', children }: { tone?: BadgeTone; children: ReactNode }) {
   const tones = {
-    neutral: 'bg-stone-100 text-stone-700 ring-stone-300',
-    brand: 'bg-orange-50 text-orange-800 ring-orange-200',
-    green: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-    red: 'bg-red-50 text-red-700 ring-red-200',
-    amber: 'bg-amber-50 text-amber-800 ring-amber-200',
+    neutral: 'bg-base-100 text-base-700 ring-base-300',
+    brand: 'bg-accent-50 text-accent-text ring-accent-200',
+    green: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30',
+    red: 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/10 dark:text-red-300 dark:ring-red-500/30',
+    amber: 'bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30',
   }
   return <span className={cx('inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset', tones[tone])}>{children}</span>
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx('rounded-xl border border-line bg-white', className)}>{children}</div>
+  return <div className={cx('rounded-xl border border-line bg-surface', className)}>{children}</div>
 }
 
 export function PageHeader({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="max-w-3xl">
-        <h1 className="text-2xl font-bold tracking-tight text-stone-900">{title}</h1>
-        {description && <p className="mt-1 text-sm text-stone-600">{description}</p>}
+        <h1 className="text-2xl font-bold tracking-tight text-base-900">{title}</h1>
+        {description && <p className="mt-1 text-sm text-base-600">{description}</p>}
       </div>
       {actions && <div className="flex gap-2">{actions}</div>}
     </div>
@@ -157,17 +157,17 @@ export function Modal({
 
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-stone-900/50 p-4 sm:p-8" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:p-8" onMouseDown={onClose}>
       <div
         role="dialog"
         aria-modal
         aria-label={title}
-        className={cx('w-full rounded-xl border border-line bg-white shadow-xl', wide ? 'max-w-2xl' : 'max-w-md')}
+        className={cx('w-full rounded-xl border border-line bg-surface shadow-xl', wide ? 'max-w-2xl' : 'max-w-md')}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
           <h2 className="text-base font-bold">{title}</h2>
-          <button onClick={onClose} className="rounded p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-600" aria-label="Close">
+          <button onClick={onClose} className="rounded p-1 text-base-400 hover:bg-base-100 hover:text-base-600" aria-label="Close">
             <svg viewBox="0 0 20 20" className="size-5" fill="currentColor"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
           </button>
         </div>
@@ -207,7 +207,7 @@ export function ConfirmDialog({
         </>
       }
     >
-      <div className="text-sm text-stone-600">{message}</div>
+      <div className="text-sm text-base-600">{message}</div>
     </Modal>
   )
 }
@@ -222,13 +222,13 @@ export function CopyField({ value }: { value: string }) {
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {
-  return <div className="px-6 py-14 text-center text-sm text-stone-500">{children}</div>
+  return <div className="px-6 py-14 text-center text-sm text-base-500">{children}</div>
 }
 
 
 export function LoadingBlock() {
   return (
-    <div className="flex justify-center py-12 text-stone-400">
+    <div className="flex justify-center py-12 text-base-400">
       <Spinner />
     </div>
   )
