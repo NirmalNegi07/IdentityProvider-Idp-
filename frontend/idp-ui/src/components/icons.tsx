@@ -22,3 +22,6 @@ export const MoonIcon = () => <Icon d="M16.5 12.2A7 7 0 0 1 7.8 3.5a7 7 0 1 0 8.
 export const MonitorIcon = () => <Icon d="M3 4h14v9H3zM7.5 17h5M10 13v4" />
 export const PaletteIcon = () => <Icon d="M10 17a7 7 0 1 1 7-7c0 1.7-1.3 2.5-2.7 2.5H12.5a1.5 1.5 0 0 0-1.1 2.5c.6.7.2 2-1.4 2ZM6.5 9.5h.01M8.5 6.5h.01M12 6.5h.01" />
 export const CheckIcon = () => <Icon d="M4.5 10.5 8 14l7.5-8" />
+export const LockIcon = () => <Icon d="M5 9h10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1ZM7 9V6.5a3 3 0 0 1 6 0V9" />
+export const GuideIcon = () => <Icon d="M4 4.5A1.5 1.5 0 0 1 5.5 3H16v12H5.5A1.5 1.5 0 0 0 4 16.5v-12ZM4 16.5A1.5 1.5 0 0 0 5.5 18H16v-3M7.5 7h5M7.5 10h3" />
+export const HelpIcon = () => <Icon d="M10 17.5a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15ZM7.8 7.6a2.3 2.3 0 0 1 4.4.9c0 1.5-2.2 2-2.2 3.2M10 14.3h.01" />

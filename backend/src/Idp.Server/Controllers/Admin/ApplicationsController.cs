@@ -273,11 +273,12 @@ public class ApplicationsController(
     {
         if (await manager.FindByIdAsync(id) is null) return NotFound();
 
-        await foreach (var token in tokenManager.FindAsync(subject: userId, client: id, status: null, type: null))
+        // Load the rows before revoking: MySQL can't run the updates while the query's reader is still open.
+        foreach (var token in await tokenManager.FindAsync(subject: userId, client: id, status: null, type: null).ToListAsync())
         {
             await tokenManager.TryRevokeAsync(token);
         }
-        await foreach (var authorization in authorizationManager.FindAsync(subject: userId, client: id, status: null, type: null, scopes: null))
+        foreach (var authorization in await authorizationManager.FindAsync(subject: userId, client: id, status: null, type: null, scopes: null).ToListAsync())
         {
             await authorizationManager.TryRevokeAsync(authorization);
         }

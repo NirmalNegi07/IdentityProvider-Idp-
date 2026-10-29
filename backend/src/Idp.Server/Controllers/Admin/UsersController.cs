@@ -167,11 +167,12 @@ public class UsersController(
         await userManager.UpdateSecurityStampAsync(user);
 
         // ...and every refresh/access token and stored consent issued to client applications.
-        await foreach (var token in tokenManager.FindBySubjectAsync(user.Id))
+        // Load the rows before revoking: MySQL can't run the updates while the query's reader is still open.
+        foreach (var token in await tokenManager.FindBySubjectAsync(user.Id).ToListAsync())
         {
             await tokenManager.TryRevokeAsync(token);
         }
-        await foreach (var authorization in authorizationManager.FindBySubjectAsync(user.Id))
+        foreach (var authorization in await authorizationManager.FindBySubjectAsync(user.Id).ToListAsync())
         {
             await authorizationManager.TryRevokeAsync(authorization);
         }

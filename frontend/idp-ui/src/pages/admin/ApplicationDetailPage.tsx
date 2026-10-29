@@ -26,6 +26,7 @@ export function ApplicationDetailPage() {
   const [deleting, setDeleting] = useState(false)
   const [busy, setBusy] = useState(false)
   const [secret, setSecret] = useState<{ clientId: string; secret: string } | null>(null)
+  const [rotating, setRotating] = useState(false)
   const { reload: reloadSidebar } = useApplications()
 
   const load = useCallback(() => {
@@ -41,11 +42,15 @@ export function ApplicationDetailPage() {
 
   async function rotate() {
     if (!app) return
+    setBusy(true)
     try {
       const res = await adminApi.applications.rotateSecret(app.id)
       setSecret({ clientId: app.clientId, secret: res.clientSecret! })
     } catch (err) {
       setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+      setRotating(false)
     }
   }
 
@@ -87,7 +92,7 @@ export function ApplicationDetailPage() {
           <div className="mt-0.5 font-mono text-xs text-base-500">{app.clientId}</div>
         </div>
         <div className="flex gap-2">
-          {app.clientType === 'confidential' && <Button variant="secondary" onClick={rotate}>New secret</Button>}
+          {app.clientType === 'confidential' && <Button variant="secondary" onClick={() => setRotating(true)}>New secret</Button>}
           <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>
           {!app.isSystem && (
             <Button variant="ghost" className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-300" onClick={() => setDeleting(true)}>Delete</Button>
@@ -126,6 +131,16 @@ export function ApplicationDetailPage() {
       )}
 
       <SecretModal secret={secret} onClose={() => setSecret(null)} />
+
+      <ConfirmDialog
+        open={rotating}
+        title="Create a new client secret"
+        confirmLabel="Create new secret"
+        message={<>The current secret stops working immediately, so sign-in to <strong>{name}</strong> fails until you paste the new secret into {name}&apos;s settings.</>}
+        busy={busy}
+        onConfirm={rotate}
+        onClose={() => setRotating(false)}
+      />
 
       <ConfirmDialog
         open={deleting}
@@ -294,10 +309,11 @@ function UsersTab({ app, onChanged }: { app: Application; onChanged: () => void 
         confirmLabel="Remove access"
         message={
           <>
-            Sign <strong>{revoking?.email}</strong> out of {name} and remove their access?
+            Remove <strong>{revoking?.email}</strong>&apos;s access to {name}? Their LAHI IDP tokens for {name} stop working. A session {name} already started
+            lasts until {name} ends it.
             {approvedOnly
-              ? ' They will not be able to sign in again until you restore it.'
-              : ' They can still sign in again, because this app lets any LAHI IDP user in. Set its consent to “External” to admit approved users only.'}
+              ? ' They will not be able to sign in again until you restore access.'
+              : ' They can still sign in again, because this app lets any LAHI IDP user in. Set “Who can sign in” to approved users only to stop that.'}
           </>
         }
         busy={busy}

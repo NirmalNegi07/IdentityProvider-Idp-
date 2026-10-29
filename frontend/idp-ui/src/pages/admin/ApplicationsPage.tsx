@@ -35,6 +35,7 @@ const CONSENT_TYPES = [
 ]
 
 interface Preset {
+  id: string
   label: string
   description: string
   apply: (base: ApplicationInput) => ApplicationInput
@@ -42,6 +43,7 @@ interface Preset {
 
 const PRESETS: Preset[] = [
   {
+    id: 'moodle',
     label: 'Moodle',
     description: 'PHP web app using Moodle OAuth 2 services',
     apply: (b) => ({
@@ -57,6 +59,7 @@ const PRESETS: Preset[] = [
     }),
   },
   {
+    id: 'spa',
     label: 'React SPA',
     description: 'Browser app, public client with PKCE',
     apply: (b) => ({
@@ -70,6 +73,7 @@ const PRESETS: Preset[] = [
     }),
   },
   {
+    id: 'express',
     label: 'Express web app',
     description: 'Server-rendered Node.js app, confidential client',
     apply: (b) => ({
@@ -83,6 +87,7 @@ const PRESETS: Preset[] = [
     }),
   },
   {
+    id: 'm2m',
     label: 'Machine to machine',
     description: 'Backend service calling an API, no user',
     apply: (b) => ({
@@ -113,8 +118,9 @@ export function ApplicationsPage() {
   const { apps, error, reload } = useApplications()
   const [params, setParams] = useSearchParams()
   const [secret, setSecret] = useState<{ clientId: string; secret: string } | null>(null)
-  // The sidebar's "+" opens this page with ?add=1.
+  // The sidebar's "+" opens this page with ?add=1; the guide uses ?add=moodle to start from a template.
   const adding = params.has('add')
+  const preset = params.get('add') ?? undefined
   const setAdding = (open: boolean) => setParams(open ? { add: '1' } : {})
 
   return (
@@ -122,7 +128,7 @@ export function ApplicationsPage() {
       <PageHeader
         title="Applications"
         description="Products that sign users in through LAHI IDP. Open one to see and manage its users."
-        actions={<Button onClick={() => setAdding(true)}>Add application</Button>}
+        actions={<Button data-tour="add-app" onClick={() => setAdding(true)}>Add application</Button>}
       />
       {error && <div className="mb-4"><Alert>{error}</Alert></div>}
 
@@ -139,6 +145,7 @@ export function ApplicationsPage() {
       {adding && (
         <ApplicationForm
           app={null}
+          preset={preset}
           onClose={() => setAdding(false)}
           onSaved={(clientId, newSecret) => {
             setAdding(false)
@@ -227,16 +234,22 @@ export function SecretModal({ secret, onClose }: { secret: { clientId: string; s
 
 export function ApplicationForm({
   app,
+  preset,
   onClose,
   onSaved,
 }: {
   app: Application | null
+  /** Template to start a new application from, e.g. 'moodle'. */
+  preset?: string
   onClose: () => void
   onSaved: (clientId: string, secret: string | null) => void
 }) {
-  const [input, setInput] = useState<ApplicationInput>(() => (app ? { ...app } : emptyInput()))
-  const [redirects, setRedirects] = useState((app?.redirectUris ?? []).join('\n'))
-  const [postLogout, setPostLogout] = useState((app?.postLogoutRedirectUris ?? []).join('\n'))
+  const [initial] = useState<ApplicationInput>(() =>
+    app ? { ...app } : (PRESETS.find((p) => p.id === preset)?.apply(emptyInput()) ?? emptyInput()),
+  )
+  const [input, setInput] = useState(initial)
+  const [redirects, setRedirects] = useState(initial.redirectUris.join('\n'))
+  const [postLogout, setPostLogout] = useState(initial.postLogoutRedirectUris.join('\n'))
   const [scopeNames, setScopeNames] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -330,7 +343,7 @@ export function ApplicationForm({
               <option value="public">Public (SPA / mobile)</option>
             </Select>
           </Field>
-          <Field label="Consent">
+          <Field label="Who can sign in">
             <Select value={input.consentType} onChange={(e) => setInput({ ...input, consentType: e.target.value as ApplicationInput['consentType'] })}>
               {CONSENT_TYPES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
             </Select>

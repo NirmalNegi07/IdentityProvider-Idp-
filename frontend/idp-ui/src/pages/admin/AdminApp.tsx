@@ -2,17 +2,20 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { AuthProvider, useAuth } from 'react-oidc-context'
 import { Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { AppearancePicker } from '../../components/AppearancePicker'
-import { AppsIcon, HomeIcon, MenuIcon, PlusIcon, RolesIcon, ScopesIcon, SignOutIcon, UsersIcon } from '../../components/icons'
+import { Tour } from '../../components/Tour'
+import { AppsIcon, CheckIcon, GuideIcon, HelpIcon, HomeIcon, MenuIcon, PlusIcon, RolesIcon, SignOutIcon, UsersIcon } from '../../components/icons'
 import { Alert, Button, LoadingBlock } from '../../components/ui'
 import { adminApi, type Application } from '../../lib/adminApi'
 import { ApplicationsContext, useApplications } from '../../lib/applications'
 import { errorMessage } from '../../lib/http'
+import { useSetupProgress } from '../../lib/setup'
+import { startTour } from '../../lib/tour'
 import { adminUserManager, hasRole } from '../../lib/oidc'
 import { ApplicationDetailPage } from './ApplicationDetailPage'
 import { AppIcon, ApplicationsPage } from './ApplicationsPage'
 import { DashboardPage } from './DashboardPage'
+import { GuidePage } from './GuidePage'
 import { RolesPage } from './RolesPage'
-import { ScopesPage } from './ScopesPage'
 import { UsersPage } from './UsersPage'
 
 export function AdminApp() {
@@ -30,9 +33,10 @@ export function AdminApp() {
           <AdminLayout>
             <Routes>
               <Route index element={<DashboardPage />} />
+              <Route path="guide" element={<GuidePage />} />
               <Route path="applications" element={<ApplicationsPage />} />
               <Route path="applications/:id" element={<ApplicationDetailPage />} />
-              <Route path="scopes" element={<ScopesPage />} />
+              {/* Scopes are hidden until a product with its own API needs them; ScopesPage is kept for then. */}
               <Route path="users" element={<UsersPage />} />
               <Route path="roles" element={<RolesPage />} />
               <Route path="*" element={<DashboardPage />} />
@@ -137,6 +141,7 @@ function AdminLayout({ children }: { children: ReactNode }) {
         </header>
         <main className="relative w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-10">{children}</main>
       </div>
+      <Tour />
     </div>
   )
 }
@@ -144,6 +149,7 @@ function AdminLayout({ children }: { children: ReactNode }) {
 function Sidebar() {
   const auth = useAuth()
   const { apps } = useApplications()
+  const setup = useSetupProgress()
   const email = auth.user?.profile.email ?? ''
 
   return (
@@ -158,10 +164,19 @@ function Sidebar() {
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-2.5 py-2" aria-label="Admin">
         <div className="space-y-0.5">
-          <SideLink to="/admin" end icon={<HomeIcon />}>Dashboard</SideLink>
+          <SideLink to="/admin" end tour="nav-dashboard" icon={<HomeIcon />}>Dashboard</SideLink>
+          <SideLink to="/admin/guide" tour="nav-guide" icon={<GuideIcon />}>
+            <span className="flex-1">Getting started</span>
+            {setup.loaded &&
+              (setup.complete ? (
+                <span className="text-emerald-500" aria-label="Set-up complete"><CheckIcon /></span>
+              ) : (
+                <span className="rounded-full bg-sidebar-hover px-1.5 text-[11px] tabular-nums text-sidebar-muted">{setup.done}/{setup.total}</span>
+              ))}
+          </SideLink>
         </div>
 
-        <div>
+        <div data-tour="nav-apps">
           <div className="mb-1 flex items-center justify-between px-2.5">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">Applications</span>
             <Link
@@ -192,14 +207,13 @@ function Sidebar() {
         <div>
           <div className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">Identity</div>
           <div className="space-y-0.5">
-            <SideLink to="/admin/users" icon={<UsersIcon />}>Users</SideLink>
-            <SideLink to="/admin/roles" icon={<RolesIcon />}>Roles</SideLink>
-            <SideLink to="/admin/scopes" icon={<ScopesIcon />}>Scopes</SideLink>
+            <SideLink to="/admin/users" tour="nav-users" icon={<UsersIcon />}>Users</SideLink>
+            <SideLink to="/admin/roles" tour="nav-roles" icon={<RolesIcon />}>Roles</SideLink>
           </div>
         </div>
       </nav>
 
-      <div className="flex items-center gap-2.5 border-t border-sidebar-line px-4 py-3">
+      <div className="flex items-center gap-2.5 border-t border-sidebar-line px-4 py-3" data-tour="account">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-700 text-sm font-semibold text-accent-fg">
           {email.charAt(0).toUpperCase() || '?'}
         </div>
@@ -207,6 +221,14 @@ function Sidebar() {
           <div className="truncate text-sm font-medium">{email}</div>
           <div className="text-xs text-sidebar-muted">Administrator</div>
         </div>
+        <button
+          className="rounded-md p-1.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg"
+          onClick={startTour}
+          title="Take the tour"
+          aria-label="Take the tour"
+        >
+          <HelpIcon />
+        </button>
         <AppearancePicker inSidebar />
         <button
           className="rounded-md p-1.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg"
@@ -221,11 +243,12 @@ function Sidebar() {
   )
 }
 
-function SideLink({ to, end, icon, children }: { to: string; end?: boolean; icon: ReactNode; children: ReactNode }) {
+function SideLink({ to, end, tour, icon, children }: { to: string; end?: boolean; tour?: string; icon: ReactNode; children: ReactNode }) {
   return (
     <NavLink
       to={to}
       end={end}
+      data-tour={tour}
       className={({ isActive }) =>
         `flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm ${
           isActive ? 'bg-sidebar-active font-semibold text-sidebar-active-fg' : 'text-sidebar-fg hover:bg-sidebar-hover'
@@ -239,10 +262,10 @@ function SideLink({ to, end, icon, children }: { to: string; end?: boolean; icon
 }
 
 const sections: Record<string, string> = {
+  guide: 'Getting started',
   applications: 'Applications',
   users: 'Users',
   roles: 'Roles',
-  scopes: 'Scopes',
 }
 
 /** "LAHI IDP / Applications / Moodle", built from the URL. */

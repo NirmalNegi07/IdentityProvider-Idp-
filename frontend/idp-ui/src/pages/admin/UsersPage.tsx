@@ -65,7 +65,7 @@ export function UsersPage() {
       <PageHeader
         title="Users"
         description="Accounts that can sign in to every connected application."
-        actions={<Button onClick={() => setEditing('new')}>Add user</Button>}
+        actions={<Button data-tour="add-user" onClick={() => setEditing('new')}>Add user</Button>}
       />
       {error && <div className="mb-4"><Alert>{error}</Alert></div>}
 
@@ -90,7 +90,7 @@ export function UsersPage() {
                 </tr>
               </thead>
               <tbody className={table.body}>
-                {data.items.map((u) => (
+                {data.items.map((u, i) => (
                   <tr key={u.id} className={table.row}>
                     <td className="px-5 py-3">
                       <div className="font-medium">{[u.firstName, u.lastName].filter(Boolean).join(' ') || '—'}</div>
@@ -106,7 +106,7 @@ export function UsersPage() {
                       {u.isLockedOut ? <Badge tone="red">Locked</Badge> : <Badge tone="green">Active</Badge>}
                     </td>
                     <td className="whitespace-nowrap px-5 py-3 text-right">
-                      <div className="inline-flex gap-1.5">
+                      <div className="inline-flex gap-1.5" data-tour={i === 0 ? 'user-actions' : undefined}>
                         <Button variant="secondary" size="sm" onClick={() => setEditing(u)}>Edit</Button>
                         <Button variant="secondary" size="sm" onClick={() => setPasswordFor(u)}>Password</Button>
                         {u.id !== currentUserId &&
@@ -156,7 +156,7 @@ export function UsersPage() {
       <ConfirmDialog
         open={!!deleting}
         title="Delete user"
-        message={<>Delete <strong>{deleting?.email}</strong>? They will be signed out of all applications. This cannot be undone.</>}
+        message={<>Delete <strong>{deleting?.email}</strong>? They can no longer sign in to any application. Sessions an app already started, such as in Moodle, last until that app ends them. This cannot be undone.</>}
         busy={busy}
         onConfirm={remove}
         onClose={() => setDeleting(null)}
@@ -275,7 +275,7 @@ function PasswordForm({ user, onClose }: { user: User; onClose: () => void }) {
       }
     >
       {done ? (
-        <Alert kind="success">Password updated. The user has been signed out of all applications.</Alert>
+        <Alert kind="success">Password updated. The user must sign in to LAHI IDP again with the new password.</Alert>
       ) : (
         <form id="password-form" className="space-y-4" onSubmit={submit}>
           {error && <Alert>{error}</Alert>}

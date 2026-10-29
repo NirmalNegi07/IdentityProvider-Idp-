@@ -1,10 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { AppsIcon, RolesIcon, ScopesIcon, UsersIcon } from '../../components/icons'
+import { AppsIcon, GuideIcon, LockIcon, UsersIcon } from '../../components/icons'
 import { Alert, Card, CopyField, EmptyState, LoadingBlock, PageHeader } from '../../components/ui'
 import { adminApi, type Stats } from '../../lib/adminApi'
 import { useApplications } from '../../lib/applications'
 import { errorMessage } from '../../lib/http'
+import { useSetupProgress } from '../../lib/setup'
 import { AppIcon } from './ApplicationsPage'
 
 export function DashboardPage() {
@@ -20,31 +21,26 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader title="Dashboard" description="One login for Moodle and every LAHI product." />
+      <SetupBanner />
       {error && <Alert>{error}</Alert>}
       {!stats && !error && <LoadingBlock />}
       {stats && (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-3">
           <StatCard tone="accent" icon={<UsersIcon />} label="Users" value={stats.users} sub={`${stats.newUsersLast7Days} new in the last 7 days`} to="/admin/users" />
           <StatCard tone="teal" icon={<AppsIcon />} label="Applications" value={stats.applications} to="/admin/applications" />
-          <StatCard tone="sky" icon={<ScopesIcon />} label="Custom scopes" value={stats.scopes} to="/admin/scopes" />
-          <StatCard tone="rose" icon={<RolesIcon />} label="Locked users" value={stats.lockedUsers} sub={`${stats.roles} roles defined`} to="/admin/users" />
+          <StatCard tone="rose" icon={<LockIcon />} label="Locked users" value={stats.lockedUsers} to="/admin/users" />
         </div>
       )}
 
       <YourApplications />
 
       <Card className="mt-8 p-5">
-        <h2 className="text-base font-bold text-base-900">Connection details for applications</h2>
+        <h2 className="text-base font-bold text-base-900">Connect an application</h2>
         <p className="mt-1 text-sm text-base-500">
-          Most OpenID Connect libraries (and Moodle&apos;s OAuth 2 services) only need the issuer URL; everything else is discovered.
+          Paste this URL as the service base URL in Moodle&apos;s OAuth 2 services (or the issuer in any OpenID Connect library). The app finds everything else itself.
         </p>
-        <dl className="mt-4 grid gap-4 md:grid-cols-2">
-          <Detail label="Issuer / authority" value={origin} />
-          <Detail label="Discovery document" value={`${origin}/.well-known/openid-configuration`} />
-          <Detail label="Authorization endpoint" value={`${origin}/connect/authorize`} />
-          <Detail label="Token endpoint" value={`${origin}/connect/token`} />
-          <Detail label="Userinfo endpoint" value={`${origin}/connect/userinfo`} />
-          <Detail label="Logout (end session) endpoint" value={`${origin}/connect/endsession`} />
+        <dl className="mt-4 max-w-xl">
+          <Detail label="Issuer URL" value={origin} />
         </dl>
       </Card>
     </>
@@ -69,6 +65,23 @@ function StatCard({ label, value, sub, to, icon, tone }: { label: string; value:
         </div>
         <div className="mt-2 text-3xl font-bold tabular-nums">{value}</div>
         {sub && <div className="mt-1 text-xs text-base-600">{sub}</div>}
+      </Card>
+    </Link>
+  )
+}
+
+function SetupBanner() {
+  const setup = useSetupProgress()
+  if (!setup.loaded || setup.complete) return null
+  return (
+    <Link to="/admin/guide" className="group mb-6 block">
+      <Card className="flex flex-wrap items-center gap-4 border-accent-300 bg-linear-to-r from-accent-100 to-surface p-4 group-hover:border-accent-500">
+        <span className="flex size-9 items-center justify-center rounded-lg bg-accent-600 text-accent-fg"><GuideIcon /></span>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-base-900">Finish setting up · {setup.done} of {setup.total} done</div>
+          <div className="text-sm text-base-600">Follow the guide to connect Moodle and test your first sign-in.</div>
+        </div>
+        <span className="font-semibold text-accent-text group-hover:text-accent-text-hover">Open guide →</span>
       </Card>
     </Link>
   )
