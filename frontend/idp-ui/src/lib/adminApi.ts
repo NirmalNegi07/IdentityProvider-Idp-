@@ -67,6 +67,8 @@ export interface User {
   roles: string[]
   createdAt: string
   lastLoginAt: string | null
+  /** Applications the user currently has access to (list endpoint only). */
+  applicationIds?: string[]
 }
 
 export interface UserInput {

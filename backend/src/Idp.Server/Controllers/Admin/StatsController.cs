@@ -24,7 +24,8 @@ public class StatsController(
 
         return new StatsDto(
             Users: await db.Users.CountAsync(),
-            Applications: (int)await applications.CountAsync(),
+            // Leave out the admin console's own client: it is part of LAHI IDP, not a product that uses it.
+            Applications: (int)await applications.CountAsync() - (await applications.FindByClientIdAsync(AdminApi.ClientId) is null ? 0 : 1),
             Scopes: (int)await scopes.CountAsync(),
             Roles: await db.Roles.CountAsync(),
             LockedUsers: await db.Users.CountAsync(u => u.LockoutEnd != null && u.LockoutEnd > now),

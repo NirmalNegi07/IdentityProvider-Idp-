@@ -72,7 +72,9 @@ public record UserDto(
     bool IsLockedOut,
     IReadOnlyList<string> Roles,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? LastLoginAt);
+    DateTimeOffset? LastLoginAt,
+    /// <summary>Applications the user currently has access to (ids). Filled by the list endpoint only.</summary>
+    IReadOnlyList<string>? ApplicationIds = null);
 
 public record UserCreateRequest(
     [Required, EmailAddress, MaxLength(256)] string Email,

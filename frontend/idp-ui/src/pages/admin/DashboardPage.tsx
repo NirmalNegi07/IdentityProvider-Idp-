@@ -26,9 +26,9 @@ export function DashboardPage() {
       {!stats && !error && <LoadingBlock />}
       {stats && (
         <div className="grid gap-4 sm:grid-cols-3">
-          <StatCard tone="accent" icon={<UsersIcon />} label="Users" value={stats.users} sub={`${stats.newUsersLast7Days} new in the last 7 days`} to="/admin/users" />
+          <StatCard tone="accent" icon={<UsersIcon />} label="Users" value={stats.users} sub={`${stats.newUsersLast7Days} new in the last 7 days`} to="/admin/idp" />
           <StatCard tone="teal" icon={<AppsIcon />} label="Applications" value={stats.applications} to="/admin/applications" />
-          <StatCard tone="rose" icon={<LockIcon />} label="Locked users" value={stats.lockedUsers} to="/admin/users" />
+          <StatCard tone="rose" icon={<LockIcon />} label="Locked users" value={stats.lockedUsers} to="/admin/idp" />
         </div>
       )}
 

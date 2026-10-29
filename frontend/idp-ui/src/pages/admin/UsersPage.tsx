@@ -1,19 +1,25 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from 'react-oidc-context'
-import { Alert, Badge, Button, Card, Checkbox, ConfirmDialog, EmptyState, Field, Input, LoadingBlock, Modal, PageHeader } from '../../components/ui'
+import { Alert, Badge, Button, Card, Checkbox, ConfirmDialog, EmptyState, Field, Input, LoadingBlock, Modal } from '../../components/ui'
 import { table } from '../../components/table'
-import { adminApi, type Paged, type Role, type User, type UserInput } from '../../lib/adminApi'
+import { adminApi, type Application, type Paged, type Role, type User, type UserInput } from '../../lib/adminApi'
+import { useApplications } from '../../lib/applications'
 import { errorMessage } from '../../lib/http'
+import { productApps } from '../../lib/setup'
+import { AppIcon } from './ApplicationsPage'
 
 const PAGE_SIZE = 20
 
 const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'Never')
 
+/** All LAHI IDP accounts. Shown as the Users tab of the LAHI IDP page. */
 export function UsersPage() {
   const auth = useAuth()
   const currentUserId = auth.user?.profile.sub
-  const [data, setData] = useState<Paged<User> | null>(null)
+  const { apps, reload: reloadApps } = useApplications()
+  const products = productApps(apps)
   const [roles, setRoles] = useState<Role[]>([])
+  const [data, setData] = useState<Paged<User> | null>(null)
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
@@ -62,16 +68,13 @@ export function UsersPage() {
 
   return (
     <>
-      <PageHeader
-        title="Users"
-        description="Accounts that can sign in to every connected application."
-        actions={<Button data-tour="add-user" onClick={() => setEditing('new')}>Add user</Button>}
-      />
       {error && <div className="mb-4"><Alert>{error}</Alert></div>}
 
       <Card>
-        <div className="border-b border-line p-4">
-          <Input type="search" placeholder="Search by email or name…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+        <div className="flex flex-wrap items-center gap-3 border-b border-line p-4">
+          <Input id="users-search" type="search" placeholder="Search by email or name…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+          <p className="flex-1 text-xs text-base-500">Everyone with a LAHI IDP account, and the applications each person belongs to.</p>
+          <Button data-tour="add-user" onClick={() => setEditing('new')}>Add user</Button>
         </div>
         {!data ? (
           <LoadingBlock />
@@ -83,6 +86,7 @@ export function UsersPage() {
               <thead className={table.head}>
                 <tr>
                   <th className="px-5 py-3">User</th>
+                  <th className="px-5 py-3">Applications</th>
                   <th className="px-5 py-3">Roles</th>
                   <th className="hidden px-5 py-3 lg:table-cell">Last sign-in</th>
                   <th className="px-5 py-3">Status</th>
@@ -93,8 +97,13 @@ export function UsersPage() {
                 {data.items.map((u, i) => (
                   <tr key={u.id} className={table.row}>
                     <td className="px-5 py-3">
-                      <div className="font-medium">{[u.firstName, u.lastName].filter(Boolean).join(' ') || '—'}</div>
+                      <div className="flex items-center gap-2 font-medium">
+                        {[u.firstName, u.lastName].filter(Boolean).join(' ') || '—'}
+                      </div>
                       <div className="text-xs text-base-500">{u.email}</div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <AppChips apps={products.filter((a) => u.applicationIds?.includes(a.id))} />
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex flex-wrap gap-1">
@@ -142,11 +151,13 @@ export function UsersPage() {
       {editing && (
         <UserForm
           user={editing === 'new' ? null : editing}
+          products={products}
           roles={roles}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null)
             load()
+            reloadApps()
           }}
         />
       )}
@@ -165,7 +176,31 @@ export function UsersPage() {
   )
 }
 
-function UserForm({ user, roles, onClose, onSaved }: { user: User | null; roles: Role[]; onClose: () => void; onSaved: () => void }) {
+function AppChips({ apps }: { apps: Application[] }) {
+  if (apps.length === 0) return <span className="text-xs text-base-400">None yet</span>
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {apps.map((a) => {
+        const name = a.displayName ?? a.clientId
+        return (
+          <span key={a.id} className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface py-0.5 pr-2 pl-1 text-xs font-medium">
+            <AppIcon name={name} size="xs" />
+            {name}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
+const accessHint = (app: Application) =>
+  app.consentType === 'external'
+    ? 'Only people ticked here can sign in to it.'
+    : 'Anyone with a LAHI IDP account can sign in to it. Ticking adds them to its list now.'
+
+function UserForm({ user, products, roles, onClose, onSaved }: { user: User | null; products: Application[]; roles: Role[]; onClose: () => void; onSaved: () => void }) {
+  const auth = useAuth()
+  const isSelf = user?.id === auth.user?.profile.sub
   const [input, setInput] = useState<UserInput>(() => ({
     email: user?.email ?? '',
     firstName: user?.firstName ?? '',
@@ -174,6 +209,10 @@ function UserForm({ user, roles, onClose, onSaved }: { user: User | null; roles:
     roles: user?.roles ?? ['User'],
     password: '',
   }))
+  const initialApps = products.filter((a) => user?.applicationIds?.includes(a.id)).map((a) => a.id)
+  const [appIds, setAppIds] = useState<string[]>(initialApps)
+  // Once the account exists, a retry after a failed app change must update it, not create it again.
+  const [savedId, setSavedId] = useState<string | null>(user?.id ?? null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -182,8 +221,10 @@ function UserForm({ user, roles, onClose, onSaved }: { user: User | null; roles:
     setBusy(true)
     setError(null)
     try {
-      if (user) await adminApi.users.update(user.id, input)
-      else await adminApi.users.create(input)
+      const saved = savedId ? await adminApi.users.update(savedId, input) : await adminApi.users.create(input)
+      setSavedId(saved.id)
+      for (const id of appIds.filter((a) => !initialApps.includes(a))) await adminApi.applications.grantUser(id, saved.id)
+      for (const id of initialApps.filter((a) => !appIds.includes(a))) await adminApi.applications.revokeUser(id, saved.id)
       onSaved()
     } catch (err) {
       setError(errorMessage(err))
@@ -193,46 +234,92 @@ function UserForm({ user, roles, onClose, onSaved }: { user: User | null; roles:
 
   const toggleRole = (name: string) =>
     setInput((i) => ({ ...i, roles: i.roles.includes(name) ? i.roles.filter((r) => r !== name) : [...i.roles, name] }))
+  const roleHint = (name: string) =>
+    name === 'Admin'
+      ? isSelf ? 'Can open this admin console. You can\'t remove it from your own account.' : 'Can open this admin console. Only for people who manage LAHI IDP.'
+      : name === 'User'
+        ? 'Default role for everyone.'
+        : 'Sent to applications that ask for roles.'
+
+  const toggleApp = (id: string) => setAppIds((ids) => (ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id]))
 
   return (
     <Modal
       open
-      title={user ? 'Edit user' : 'Add user'}
+      title={user ? `Edit ${user.email}` : 'Add user'}
       onClose={onClose}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" form="user-form" loading={busy}>Save</Button>
+          <Button type="submit" form="user-form" loading={busy}>{user ? 'Save' : 'Create user'}</Button>
         </>
       }
     >
-      <form id="user-form" className="space-y-4" onSubmit={submit}>
+      <form id="user-form" className="space-y-5" onSubmit={submit}>
+        {!user && (
+          <p className="text-sm text-base-600">
+            This creates one LAHI IDP account. Choose below which applications the person belongs to.
+          </p>
+        )}
         {error && <Alert>{error}</Alert>}
         <div className="grid grid-cols-2 gap-3">
           <Field label="First name">
-            <Input value={input.firstName} onChange={(e) => setInput({ ...input, firstName: e.target.value })} />
+            <Input id="user-first-name" value={input.firstName} onChange={(e) => setInput({ ...input, firstName: e.target.value })} />
           </Field>
           <Field label="Last name">
-            <Input value={input.lastName} onChange={(e) => setInput({ ...input, lastName: e.target.value })} />
+            <Input id="user-last-name" value={input.lastName} onChange={(e) => setInput({ ...input, lastName: e.target.value })} />
           </Field>
         </div>
         <Field label="Email">
-          <Input type="email" required value={input.email} onChange={(e) => setInput({ ...input, email: e.target.value })} />
+          <Input id="user-email" type="email" required value={input.email} onChange={(e) => setInput({ ...input, email: e.target.value })} />
         </Field>
         {!user && (
           <Field label="Password" hint="At least 8 characters, with upper and lower case letters and a number.">
-            <Input type="password" required autoComplete="new-password" value={input.password} onChange={(e) => setInput({ ...input, password: e.target.value })} />
+            <Input id="user-password" type="password" required autoComplete="new-password" value={input.password} onChange={(e) => setInput({ ...input, password: e.target.value })} />
           </Field>
         )}
-        <Checkbox label="Email confirmed" checked={input.emailConfirmed} onChange={(e) => setInput({ ...input, emailConfirmed: e.target.checked })} />
-        <fieldset>
-          <legend className="mb-2 text-sm font-medium text-base-700">Roles</legend>
-          <div className="grid grid-cols-2 gap-2">
+
+        <fieldset className="rounded-lg border border-line p-3.5">
+          <legend className="px-1 text-sm font-semibold text-base-800">Applications</legend>
+          {products.length === 0 ? (
+            <p className="text-sm text-base-500">No applications yet. Add one under Applications first.</p>
+          ) : (
+            <div className="space-y-3">
+              {products.map((a) => {
+                const name = a.displayName ?? a.clientId
+                return (
+                  <Checkbox
+                    key={a.id}
+                    id={`user-app-${a.id}`}
+                    label={<span className="inline-flex items-center gap-1.5"><AppIcon name={name} size="xs" />{name}</span>}
+                    description={accessHint(a)}
+                    checked={appIds.includes(a.id)}
+                    onChange={() => toggleApp(a.id)}
+                  />
+                )
+              })}
+            </div>
+          )}
+        </fieldset>
+
+        <fieldset className="rounded-lg border border-line p-3.5">
+          <legend className="px-1 text-sm font-semibold text-base-800">Roles</legend>
+          <div className="grid gap-3 sm:grid-cols-2">
             {roles.map((r) => (
-              <Checkbox key={r.id} label={r.name} checked={input.roles.includes(r.name)} onChange={() => toggleRole(r.name)} />
+              <Checkbox
+                key={r.id}
+                id={`user-role-${r.id}`}
+                label={r.name}
+                description={roleHint(r.name)}
+                checked={input.roles.includes(r.name)}
+                disabled={isSelf && r.name === 'Admin'}
+                onChange={() => toggleRole(r.name)}
+              />
             ))}
           </div>
         </fieldset>
+
+        <Checkbox id="user-email-confirmed" label="Email confirmed" checked={input.emailConfirmed} onChange={(e) => setInput({ ...input, emailConfirmed: e.target.checked })} />
       </form>
     </Modal>
   )

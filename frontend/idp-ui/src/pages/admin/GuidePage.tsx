@@ -46,8 +46,8 @@ export function GuidePage() {
           </div>
           <ol className="divide-y divide-line/70">
             <Step n={1} done={steps.user} title="Add a user to test with"
-              action={<ActionLink to="/admin/users">Open Users</ActionLink>}>
-              Create a test account, for example a teacher. Every account works for every connected application. Done when there is a user besides you.
+              action={<ActionLink to="/admin/idp">Open LAHI IDP users</ActionLink>}>
+              Create a test account, for example a teacher, and tick Moodle under Applications. Done when there is a user besides you.
             </Step>
             <Step n={2} done={steps.app} title="Add your application in LAHI IDP"
               action={<ActionLink to="/admin/applications?add=moodle">Add Moodle</ActionLink>}>
@@ -299,12 +299,12 @@ function Value({ label, value }: { label: string; value: string }) {
 
 function EverydayTasks() {
   const tasks = [
-    { task: 'Add a user', where: 'Users → Add user', idp: 'Creates the account with a password you set.', app: 'Moodle creates its own account on their first sign-in.' },
-    { task: 'Reset a password', where: 'Users → Password', idp: 'Sets the new password and ends their LAHI IDP session.', app: 'An open Moodle session continues until it ends.' },
-    { task: 'Lock a user', where: 'Users → Lock', idp: 'Blocks every new sign-in and cancels their IDP tokens.', app: 'An open Moodle session continues until it ends; they can\'t sign in again.' },
+    { task: 'Add a user', where: 'LAHI IDP → Users → Add user, or an application → Users → Add user', idp: 'Creates one account and adds it to the applications you tick.', app: 'Moodle creates its own account on their first sign-in.' },
+    { task: 'Reset a password', where: 'LAHI IDP → Users → Password', idp: 'Sets the new password and ends their LAHI IDP session.', app: 'An open Moodle session continues until it ends.' },
+    { task: 'Lock a user', where: 'LAHI IDP → Users → Lock', idp: 'Blocks every new sign-in and cancels their IDP tokens.', app: 'An open Moodle session continues until it ends; they can\'t sign in again.' },
     { task: 'Remove access to one app', where: 'Applications → app → Users', idp: 'Cancels their tokens for that app only.', app: 'With "approved users only", they can\'t sign in to it again. Otherwise they can.' },
     { task: 'Create a new secret', where: 'Applications → app → New secret', idp: 'The old secret stops working straight away.', app: 'Sign-in fails until you paste the new secret into the app.' },
-    { task: 'Delete a user', where: 'Users → Delete', idp: 'Removes the account for good.', app: 'Their Moodle account stays, but they can no longer sign in to it.' },
+    { task: 'Delete a user', where: 'LAHI IDP → Users → Delete', idp: 'Removes the account for good.', app: 'Their Moodle account stays, but they can no longer sign in to it.' },
   ]
   return (
     <Section title="Everyday tasks" description="What each action does in LAHI IDP, and what it means for an application like Moodle.">
@@ -335,16 +335,16 @@ function Questions() {
       a: 'On their first sign-in through LAHI IDP, Moodle matches them by email and links the accounts (after a confirmation email, if "Require email verification" is on). Their courses and grades stay as they are.',
     },
     {
-      q: 'Why does a user appear on an application\'s Users tab?',
-      a: 'They signed in to that application through LAHI IDP at least once, or an admin added them there.',
+      q: 'Where does a new user go?',
+      a: 'Every user is created in LAHI IDP. They belong to an application when you tick it on the user form or add them on the application\'s Users tab, or when they sign in to it for the first time. Moodle creates its own copy of the account at that first sign-in.',
     },
     {
       q: 'Does signing out of Moodle sign me out of LAHI IDP?',
       a: 'No. Moodle ends only its own session, so the next "Log in with LAHI IDP" is instant while the IDP session lasts (8 hours).',
     },
     {
-      q: 'Are IDP roles the same as Moodle roles?',
-      a: 'No. Roles here (such as Admin) are for LAHI IDP and apps that ask for them. Teacher and student roles are still managed inside Moodle.',
+      q: 'How do roles reach an application?',
+      a: 'Create roles such as Teacher under Roles and give them to users. Applications that ask for the "roles" scope receive them at sign-in. Moodle\'s built-in OAuth 2 login does not read roles, so in Moodle they are still set inside Moodle until a plugin maps them.',
     },
   ]
   return (

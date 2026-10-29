@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Alert, Badge, Button, Card, ConfirmDialog, CopyField, EmptyState, Input, LoadingBlock, Modal } from '../../components/ui'
+import { Alert, Badge, Button, Card, ConfirmDialog, CopyField, EmptyState, Field, Input, LoadingBlock, Modal } from '../../components/ui'
 import { table } from '../../components/table'
 import { adminApi, type Application, type ApplicationUser, type Paged, type User } from '../../lib/adminApi'
 import { useApplications } from '../../lib/applications'
@@ -154,9 +154,10 @@ export function ApplicationDetailPage() {
   )
 }
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
+export function TabButton({ active, onClick, tour, children }: { active: boolean; onClick: () => void; tour?: string; children: ReactNode }) {
   return (
     <button
+      data-tour={tour}
       role="tab"
       aria-selected={active}
       onClick={onClick}
@@ -248,7 +249,9 @@ function UsersTab({ app, onChanged }: { app: Application; onChanged: () => void 
                 {data.items.map((u) => (
                   <tr key={u.id} className={table.row}>
                     <td className="px-5 py-3">
-                      <div className="font-medium">{fullName(u)}</div>
+                      <div className="flex items-center gap-2 font-medium">
+                        {fullName(u)}
+                      </div>
                       <div className="text-xs text-base-500">{u.email}</div>
                     </td>
                     <td className="px-5 py-3">
@@ -295,8 +298,8 @@ function UsersTab({ app, onChanged }: { app: Application; onChanged: () => void 
         <AddUserModal
           appName={name}
           onClose={() => setAdding(false)}
-          onAdd={async (user) => {
-            await adminApi.applications.grantUser(app.id, user.id)
+          onAdd={async (userId) => {
+            await adminApi.applications.grantUser(app.id, userId)
             load()
             onChanged()
           }}
@@ -324,7 +327,30 @@ function UsersTab({ app, onChanged }: { app: Application; onChanged: () => void 
   )
 }
 
-function AddUserModal({ appName, onClose, onAdd }: { appName: string; onClose: () => void; onAdd: (user: User) => Promise<void> }) {
+function AddUserModal({ appName, onClose, onAdd }: { appName: string; onClose: () => void; onAdd: (userId: string) => Promise<void> }) {
+  const [mode, setMode] = useState<'existing' | 'new'>('existing')
+  return (
+    <Modal open title={`Add users to ${appName}`} onClose={onClose} footer={<Button variant="secondary" onClick={onClose}>Done</Button>}>
+      <div className="grid grid-cols-2 gap-1 rounded-lg bg-base-100 p-1" role="tablist">
+        {(['existing', 'new'] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            role="tab"
+            aria-selected={mode === m}
+            onClick={() => setMode(m)}
+            className={`rounded-md px-3 py-1.5 text-sm font-semibold ${mode === m ? 'bg-surface text-base-900 shadow-sm' : 'text-base-500 hover:text-base-800'}`}
+          >
+            {m === 'existing' ? 'Existing user' : 'New user'}
+          </button>
+        ))}
+      </div>
+      {mode === 'existing' ? <ExistingUserPicker onAdd={onAdd} /> : <NewUserForm appName={appName} onAdd={onAdd} />}
+    </Modal>
+  )
+}
+
+function ExistingUserPicker({ onAdd }: { onAdd: (userId: string) => Promise<void> }) {
   const [search, setSearch] = useState('')
   const [results, setResults] = useState<User[] | null>(null)
   const [added, setAdded] = useState<string[]>([])
@@ -340,7 +366,7 @@ function AddUserModal({ appName, onClose, onAdd }: { appName: string; onClose: (
   async function add(user: User) {
     setError(null)
     try {
-      await onAdd(user)
+      await onAdd(user.id)
       setAdded((a) => [...a, user.id])
     } catch (err) {
       setError(errorMessage(err))
@@ -348,13 +374,14 @@ function AddUserModal({ appName, onClose, onAdd }: { appName: string; onClose: (
   }
 
   return (
-    <Modal open title={`Add users to ${appName}`} onClose={onClose} footer={<Button onClick={onClose}>Done</Button>}>
+    <>
+      <p className="text-sm text-base-600">Give someone who already has a LAHI IDP account access to this application.</p>
       {error && <Alert>{error}</Alert>}
-      <Input type="search" autoFocus placeholder="Search LAHI IDP users by email or name…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      <Input id="add-user-search" type="search" autoFocus placeholder="Search LAHI IDP users by email or name…" value={search} onChange={(e) => setSearch(e.target.value)} />
       {!results ? (
         <LoadingBlock />
       ) : results.length === 0 ? (
-        <p className="py-4 text-center text-sm text-base-500">No users found.</p>
+        <p className="py-4 text-center text-sm text-base-500">No users found. Use “New user” to create one.</p>
       ) : (
         <ul className="divide-y divide-line/70 rounded-md ring-1 ring-base-200">
           {results.map((u) => (
@@ -372,7 +399,52 @@ function AddUserModal({ appName, onClose, onAdd }: { appName: string; onClose: (
           ))}
         </ul>
       )}
-    </Modal>
+    </>
+  )
+}
+
+function NewUserForm({ appName, onAdd }: { appName: string; onAdd: (userId: string) => Promise<void> }) {
+  const empty = { firstName: '', lastName: '', email: '', password: '' }
+  const [form, setForm] = useState(empty)
+  const [created, setCreated] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [key]: e.target.value })
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setError(null)
+    try {
+      const user = await adminApi.users.create({ ...form, emailConfirmed: true, roles: ['User'] })
+      await onAdd(user.id)
+      setCreated(user.email)
+      setForm(empty)
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form className="space-y-4" onSubmit={submit}>
+      <p className="text-sm text-base-600">
+        Creates a LAHI IDP account and gives it access to {appName}. The same account can be added to other applications later.
+      </p>
+      {created && <Alert kind="success">Created {created} and added them to {appName}.</Alert>}
+      {error && <Alert>{error}</Alert>}
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="First name"><Input id="new-user-first-name" value={form.firstName} onChange={set('firstName')} /></Field>
+        <Field label="Last name"><Input id="new-user-last-name" value={form.lastName} onChange={set('lastName')} /></Field>
+      </div>
+      <Field label="Email"><Input id="new-user-email" type="email" required value={form.email} onChange={set('email')} /></Field>
+      <Field label="Password" hint="At least 8 characters, with upper and lower case letters and a number.">
+        <Input id="new-user-password" type="password" required autoComplete="new-password" value={form.password} onChange={set('password')} />
+      </Field>
+      <Button type="submit" className="w-full" loading={busy}>Create and add to {appName}</Button>
+    </form>
   )
 }
 

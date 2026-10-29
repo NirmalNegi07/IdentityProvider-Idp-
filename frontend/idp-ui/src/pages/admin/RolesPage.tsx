@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Alert, Badge, Button, Card, ConfirmDialog, Input, LoadingBlock, PageHeader } from '../../components/ui'
+import { Alert, Badge, Button, Card, ConfirmDialog, Input, LoadingBlock } from '../../components/ui'
 import { adminApi, type Role } from '../../lib/adminApi'
 import { errorMessage } from '../../lib/http'
 
+/** Roles given to LAHI IDP users. Shown as the Roles tab of the LAHI IDP page. */
 export function RolesPage() {
   const [roles, setRoles] = useState<Role[] | null>(null)
   const [name, setName] = useState('')
@@ -46,10 +47,9 @@ export function RolesPage() {
 
   return (
     <>
-      <PageHeader
-        title="Roles"
-        description={<>Roles are sent to applications in the <code className="text-xs">role</code> claim when they request the <code className="text-xs">roles</code> scope.</>}
-      />
+      <p className="mb-4 max-w-2xl text-sm text-base-600">
+        <b>Admin</b> can open this console. Other roles, such as Teacher, are sent in the <code className="text-xs">role</code> claim to applications that ask for the <code className="text-xs">roles</code> scope.
+      </p>
       {error && <div className="mb-4"><Alert>{error}</Alert></div>}
 
       <Card className="max-w-2xl">

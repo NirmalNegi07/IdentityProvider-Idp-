@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AuthProvider, useAuth } from 'react-oidc-context'
-import { Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { AppearancePicker } from '../../components/AppearancePicker'
 import { Tour } from '../../components/Tour'
-import { AppsIcon, CheckIcon, GuideIcon, HelpIcon, HomeIcon, MenuIcon, PlusIcon, RolesIcon, SignOutIcon, UsersIcon } from '../../components/icons'
+import { AppsIcon, CheckIcon, GuideIcon, HelpIcon, HomeIcon, MenuIcon, PlusIcon, SignOutIcon } from '../../components/icons'
 import { Alert, Button, LoadingBlock } from '../../components/ui'
 import { adminApi, type Application } from '../../lib/adminApi'
 import { ApplicationsContext, useApplications } from '../../lib/applications'
@@ -15,8 +15,7 @@ import { ApplicationDetailPage } from './ApplicationDetailPage'
 import { AppIcon, ApplicationsPage } from './ApplicationsPage'
 import { DashboardPage } from './DashboardPage'
 import { GuidePage } from './GuidePage'
-import { RolesPage } from './RolesPage'
-import { UsersPage } from './UsersPage'
+import { IdpPage } from './IdpPage'
 
 export function AdminApp() {
   const navigate = useNavigate()
@@ -36,9 +35,10 @@ export function AdminApp() {
               <Route path="guide" element={<GuidePage />} />
               <Route path="applications" element={<ApplicationsPage />} />
               <Route path="applications/:id" element={<ApplicationDetailPage />} />
+              <Route path="idp" element={<IdpPage />} />
+              <Route path="roles" element={<Navigate to="/admin/idp?tab=roles" replace />} />
               {/* Scopes are hidden until a product with its own API needs them; ScopesPage is kept for then. */}
-              <Route path="users" element={<UsersPage />} />
-              <Route path="roles" element={<RolesPage />} />
+              <Route path="users" element={<Navigate to="/admin/idp" replace />} />
               <Route path="*" element={<DashboardPage />} />
             </Routes>
           </AdminLayout>
@@ -94,7 +94,8 @@ function ApplicationsProvider({ children }: { children: ReactNode }) {
     adminApi.applications
       .list()
       .then((list) => {
-        setApps(list)
+        // The admin console signs in through the IDP too, but it is part of LAHI IDP, not a product that uses it.
+        setApps(list.filter((a) => !a.isSystem))
         setError(null)
       })
       .catch((err) => setError(errorMessage(err)))
@@ -176,6 +177,16 @@ function Sidebar() {
           </SideLink>
         </div>
 
+        <div>
+          <div className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">Identity provider</div>
+          <div className="space-y-0.5">
+            <SideLink to="/admin/idp" tour="nav-idp" icon={<img src="/favicon.svg" alt="" className="size-[18px] shrink-0" />}>
+              <span className="flex-1">LAHI IDP</span>
+              <span className="text-[11px] text-sidebar-muted">Users · Roles</span>
+            </SideLink>
+          </div>
+        </div>
+
         <div data-tour="nav-apps">
           <div className="mb-1 flex items-center justify-between px-2.5">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">Applications</span>
@@ -201,14 +212,6 @@ function Sidebar() {
                 </SideLink>
               )
             })}
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">Identity</div>
-          <div className="space-y-0.5">
-            <SideLink to="/admin/users" tour="nav-users" icon={<UsersIcon />}>Users</SideLink>
-            <SideLink to="/admin/roles" tour="nav-roles" icon={<RolesIcon />}>Roles</SideLink>
           </div>
         </div>
       </nav>
@@ -264,8 +267,6 @@ function SideLink({ to, end, tour, icon, children }: { to: string; end?: boolean
 const sections: Record<string, string> = {
   guide: 'Getting started',
   applications: 'Applications',
-  users: 'Users',
-  roles: 'Roles',
 }
 
 /** "LAHI IDP / Applications / Moodle", built from the URL. */
@@ -276,6 +277,7 @@ function Breadcrumbs() {
 
   const crumbs: { label: string; to?: string }[] = [{ label: 'LAHI IDP', to: '/admin' }]
   if (!section) crumbs.push({ label: 'Dashboard' })
+  else if (section === 'idp') crumbs.push({ label: location.search.includes('tab=roles') ? 'Roles' : 'Users' })
   else if (sections[section]) {
     crumbs.push({ label: sections[section], to: id ? `/admin/${section}` : undefined })
     if (id && section === 'applications') {

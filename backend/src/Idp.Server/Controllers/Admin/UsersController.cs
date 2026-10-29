@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
+using OpenIddict.EntityFrameworkCore.Models;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace Idp.Server.Controllers.Admin;
@@ -45,7 +46,16 @@ public class UsersController(
                            select new { ur.UserId, r.Name }).ToListAsync();
         var rolesByUser = roles.ToLookup(r => r.UserId, r => r.Name!);
 
-        return new PagedResult<UserDto>(users.Select(u => ToDto(u, rolesByUser[u.Id].ToList())).ToList(), total, page, pageSize);
+        // A valid authorization for (user, application) is what puts the user on that application's list.
+        var access = await db.Set<OpenIddictEntityFrameworkCoreAuthorization>()
+            .Where(a => a.Subject != null && ids.Contains(a.Subject) && a.Status == Statuses.Valid)
+            .Select(a => new { UserId = a.Subject!, ApplicationId = a.Application!.Id! })
+            .Distinct()
+            .ToListAsync();
+        var appsByUser = access.ToLookup(a => a.UserId, a => a.ApplicationId);
+
+        var items = users.Select(u => ToDto(u, rolesByUser[u.Id].ToList()) with { ApplicationIds = appsByUser[u.Id].ToList() }).ToList();
+        return new PagedResult<UserDto>(items, total, page, pageSize);
     }
 
     [HttpGet("{id}")]
