@@ -14,7 +14,7 @@ It has no UI. Browsers reach it through the frontend's origin; see the [root REA
 
 ```bash
 cd src/Idp.Server
-cp .env.example .env     # fill in MySQL credentials and the first admin
+# edit appsettings.json: MySQL connection string and the first admin
 dotnet run               # http://localhost:5000 (Development: plain http allowed)
 ```
 
@@ -26,16 +26,17 @@ On startup, `Services/SeedWorker.cs`:
 
 ## Configuration
 
-Secrets go in `src/Idp.Server/.env` (gitignored). Real environment variables override it.
+All settings, including the database credentials, are read from `appsettings.json`
+(`appsettings.Development.json` overrides it locally). It is committed to git, so keep real passwords out of commits.
 
-| Variable | Purpose |
+| Setting | Purpose |
 |---|---|
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | MySQL connection |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | First administrator, created only while no Admin exists |
-| `IDP_ISSUER` | Public URL. Locally: `http://localhost:5173` (set in `appsettings.Development.json`). Production: `https://<your domain>` |
-| `CERT_PASSWORD` | Password for the generated `.pfx` key files |
+| `ConnectionStrings:Default` | MySQL connection: `server=…;port=3306;database=…;user=…;password=…` |
+| `Idp:Admin:Email`, `Idp:Admin:Password` | First administrator, created only while no Admin exists |
+| `Idp:Issuer` | Public URL. Locally: `http://localhost:5173` (set in `appsettings.Development.json`). Production: `https://<your domain>` |
+| `Idp:Certificates:Password` | Password for the generated `.pfx` key files |
 
-Other settings live in `appsettings.json` under `Idp`:
+Other settings under `Idp`:
 
 | Setting | Purpose |
 |---|---|
@@ -98,5 +99,4 @@ Migrations are applied automatically on startup.
 | `Services/UserClaimsFactory.cs` | Which user claims go into ID and access tokens |
 | `Services/SeedWorker.cs` | Migrations and seed data |
 | `Infrastructure/ClientCorsPolicyProvider.cs` | CORS for registered SPA origins |
-| `Infrastructure/EnvFile.cs` | `.env` loading and friendly variable names |
 | `Infrastructure/CertificateLoader.cs` | Creates and loads the signing and encryption certificates |

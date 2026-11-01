@@ -11,9 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using OpenIddict.Validation.AspNetCore;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
-EnvFile.Load();
 var builder = WebApplication.CreateBuilder(args);
-EnvFile.AddFriendlyVariables(builder.Configuration);
 
 var idpOptions = builder.Configuration.GetSection(IdpOptions.SectionName).Get<IdpOptions>() ?? new IdpOptions();
 builder.Services.Configure<IdpOptions>(builder.Configuration.GetSection(IdpOptions.SectionName));

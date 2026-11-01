@@ -50,7 +50,7 @@ Prerequisites: .NET 10 SDK, Node.js 20.19+ (22 recommended), MySQL 8.
 ```bash
 # Terminal 1: backend
 cd backend/src/Idp.Server
-cp .env.example .env      # set DB_USER / DB_PASSWORD and ADMIN_EMAIL / ADMIN_PASSWORD
+# edit appsettings.json: ConnectionStrings:Default and Idp:Admin (Email, Password)
 dotnet run                # http://localhost:5000; creates the DB, applies migrations, seeds the admin
 
 # Terminal 2: frontend
@@ -59,7 +59,7 @@ npm install
 npm run dev               # http://localhost:5173
 ```
 
-Open **http://localhost:5173/admin** and sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Always use port 5173 in the browser and in client apps, never 5000.
+Open **http://localhost:5173/admin** and sign in with the `Idp:Admin` email and password. Always use port 5173 in the browser and in client apps, never 5000.
 
 ## Connecting applications
 
@@ -223,14 +223,18 @@ cd ../../backend && dotnet publish src/Idp.Server -c Release -o /opt/idp/backend
 cp -r ../frontend/idp-ui/dist /opt/idp/frontend
 ```
 
-**2. Configure the backend.** Put a `.env` file in `/opt/idp/backend`, or set real environment variables:
+**2. Configure the backend.** Edit `/opt/idp/backend/appsettings.json`:
 
+```json
+"ConnectionStrings": { "Default": "server=localhost;port=3306;database=idp;user=idp;password=…" },
+"Idp": {
+  "Issuer": "https://auth.example.com",
+  "Admin": { "Email": "…", "Password": "…" },
+  "Certificates": { "Password": "…" }
+}
 ```
-IDP_ISSUER=https://auth.example.com
-DB_HOST=… DB_NAME=… DB_USER=… DB_PASSWORD=…
-ADMIN_EMAIL=… ADMIN_PASSWORD=…
-CERT_PASSWORD=…
-```
+
+When you deploy an update, keep this file: don't overwrite it with the one from the build.
 
 **3. Run the backend as a service** on `http://localhost:5000`, e.g. with systemd:
 

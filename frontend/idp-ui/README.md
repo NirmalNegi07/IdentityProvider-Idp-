@@ -18,11 +18,13 @@ npm install
 npm run dev        # http://localhost:5173 with hot reload
 ```
 
-The dev server proxies `/api`, `/connect` and `/.well-known` to the backend (see `vite.config.ts`). This lets the browser treat UI and backend as one origin, which the session cookie and OIDC redirects require. To point at a backend elsewhere, create `.env.local` with:
+The dev server proxies `/api`, `/connect` and `/.well-known` to the backend (see `vite.config.ts`). This lets the browser treat UI and backend as one origin, which the session cookie and OIDC redirects require. The backend address is set in `.env`:
 
 ```
 IDP_BACKEND_URL=http://localhost:5000
 ```
+
+To use a different backend on your machine only, override it in `.env.local` (gitignored).
 
 ## Build and deploy
 
